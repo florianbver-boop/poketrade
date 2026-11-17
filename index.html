@@ -96,7 +96,7 @@ const DB={db:null,
   set(k,v){if(!this.db){try{localStorage.setItem('pt_'+k,JSON.stringify(v))}catch(e){toast('Stockage plein : exporte une sauvegarde')}return Promise.resolve()}
     return new Promise((res,rej)=>{const t=this.db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})}
 };
-let S={items:[],costs:[],settings:{model:'gemini-2.5-flash'}};
+let S={items:[],costs:[],settings:{model:'gemini-3.8-flash'}};
 const save=()=>DB.set('state',S).catch(e=>toast('Erreur sauvegarde : '+e.message));
 const getKey=()=>{try{return localStorage.getItem('pt_gemini_key')||''}catch(e){return S.settings.key||''}};
 const setKey=k=>{try{localStorage.setItem('pt_gemini_key',k)}catch(e){S.settings.key=k}};
@@ -169,7 +169,7 @@ const SCHEMA={type:'OBJECT',properties:{objets:{type:'ARRAY',items:{type:'OBJECT
 
 async function gemini(parts,json=true){
   const key=getKey();if(!key)throw new Error('Ajoute ta clé API Gemini dans Réglages');
-  const model=(S.settings.model||'gemini-2.5-flash').trim();
+  const model=(S.settings.model||'gemini-3.8-flash').trim();
   const body={contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.2}:{temperature:0}};
   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
@@ -478,8 +478,8 @@ function renderSettings(){
     <h3 style="margin-top:0">Gemini</h3>
     <label>Clé API Gemini<input id="key" type="password" value="${esc(getKey())}" placeholder="AIza…"></label>
     <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Stockée uniquement dans ce navigateur.</p>
-    <label>Modèle<input id="model" value="${esc(S.settings.model||'gemini-2.5-flash')}" list="models"></label>
-    <datalist id="models"><option>gemini-2.5-flash</option><option>gemini-2.5-pro</option><option>gemini-2.5-flash-lite</option></datalist>
+    <label>Modèle<input id="model" value="${esc(S.settings.model||'gemini-3.8-flash')}" list="models"></label>
+    <datalist id="models"><option>gemini-3.8-flash</option></datalist>
     <p class="hint">Si Google sort un modèle plus récent, colle simplement son nom ici.</p>
     <div class="bar"><button class="btn pri" data-act="saveKey">Enregistrer</button><button class="btn" data-act="testKey">Tester la connexion</button><span class="hint" id="testMsg"></span></div>
   </div>
@@ -519,8 +519,8 @@ document.addEventListener('click',async e=>{
   else if(a==='costEdit'){costEdit=el.dataset.id;renderCosts();window.scrollTo(0,0)}
   else if(a==='costCancel'){costEdit=null;renderCosts()}
   else if(a==='costDel'){if(confirm('Supprimer ce frais ?')){S.costs=S.costs.filter(x=>x.id!==costEdit);costEdit=null;save();renderCosts()}}
-  else if(a==='saveKey'){setKey($('#key').value.trim());S.settings.model=$('#model').value.trim()||'gemini-2.5-flash';save();toast('Réglages enregistrés ✓')}
-  else if(a==='testKey'){setKey($('#key').value.trim());S.settings.model=$('#model').value.trim()||'gemini-2.5-flash';save();
+  else if(a==='saveKey'){setKey($('#key').value.trim());S.settings.model=$('#model').value.trim()||'gemini-3.8-flash';save();toast('Réglages enregistrés ✓')}
+  else if(a==='testKey'){setKey($('#key').value.trim());S.settings.model=$('#model').value.trim()||'gemini-3.8-flash';save();
     const m=$('#testMsg');m.textContent='Test…';try{await gemini([{text:'Réponds juste OK'}],false);m.innerHTML='<span class="pos">Connexion OK ✓</span>'}catch(err){m.innerHTML='<span class="neg">'+esc(err.message)+'</span>'}}
   else if(a==='export')download('poketrade_sauvegarde_'+today()+'.json',JSON.stringify({v:1,items:S.items,costs:S.costs,settings:{model:S.settings.model}}),'application/json');
   else if(a==='import')$('#importFile').click();
@@ -539,6 +539,7 @@ $('#importFile').onchange=async e=>{
 (async()=>{
   try{await DB.open()}catch(e){DB.db=null}
   try{const st=await DB.get('state');if(st)S={...S,...st,settings:{...S.settings,...(st.settings||{})}}}catch(e){}
+  if(/^gemini-(1|2)\./.test(S.settings.model||'')){S.settings.model='gemini-3.8-flash';save()}
   render();
 })();
 </script>
