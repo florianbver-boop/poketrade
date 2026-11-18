@@ -6,541 +6,443 @@
 <meta name="theme-color" content="#111318">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="PokeTrade">
-<title>PokeTrade — Rentabilité</title>
+<title>PokeTrade</title>
 <style>
 :root{--bg:#111318;--card:#1a1d24;--card2:#222632;--line:#2c3140;--txt:#e9ecf2;--mut:#8b93a7;--acc:#ffcb05;--pos:#3ecf8e;--neg:#ff6b6b;--blue:#5aa9ff;--r:12px}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 header{position:sticky;top:0;z-index:5;background:rgba(17,19,24,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px}
-header h1{font-size:17px;margin:0;letter-spacing:.3px}
+header h1{font-size:17px;margin:0;flex:1}
 header h1 span{color:var(--acc)}
-main{max-width:860px;margin:0 auto;padding:14px 14px 96px}
+#sync{font-size:12px;color:var(--mut)}
+main{max-width:760px;margin:0 auto;padding:14px 14px 100px}
 nav{position:fixed;bottom:0;left:0;right:0;z-index:5;background:#151820;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;max-width:170px;background:none;border:0;color:var(--mut);padding:9px 4px 10px;font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button{flex:1;max-width:150px;background:none;border:0;color:var(--mut);padding:9px 2px 10px;font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button b{font-size:19px;line-height:1}
 nav button.on{color:var(--acc)}
+nav button.add b{background:var(--acc);color:#111;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px}
 h2{font-size:18px;margin:4px 0 12px}
-h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin:18px 0 8px}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin:18px 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
-.row>*{flex:1;min-width:140px}
-label{display:block;font-size:12px;color:var(--mut);margin-bottom:8px}
-input,select,textarea{width:100%;margin-top:3px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:9px 10px;font:inherit}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
-textarea{min-height:60px;resize:vertical}
-.btn{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:9px 14px;font:inherit;cursor:pointer;white-space:nowrap}
-.btn:hover{border-color:var(--mut)}
+.row>*{flex:1;min-width:130px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:10px}
+input,select{width:100%;margin-top:3px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:10px;font:inherit;font-size:16px}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.btn{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block}
 .btn.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+.btn.big{width:100%;padding:14px;font-size:16px}
 .btn.dng{color:var(--neg)}
-.btn.sm{padding:5px 10px;font-size:13px}
-.btn:disabled{opacity:.5;cursor:wait}
+.btn:disabled{opacity:.5}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
 .kpi small{display:block;color:var(--mut);font-size:12px}
 .kpi b{font-size:20px;display:block;margin-top:2px}
-.kpi.big b{font-size:24px}
+.kpi.hero{grid-column:1/-1;text-align:center;padding:16px}
+.kpi.hero b{font-size:32px}
 .pos{color:var(--pos)}.neg{color:var(--neg)}.mut{color:var(--mut)}
 .item{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px;margin-bottom:8px;cursor:pointer}
-.item:hover{border-color:var(--mut)}
-.thumb{width:56px;height:72px;border-radius:7px;object-fit:cover;background:var(--card2);flex:none;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:22px}
+.thumb{width:50px;height:68px;border-radius:6px;object-fit:cover;background:var(--card2);flex:none;display:flex;align-items:center;justify-content:center;font-size:22px}
 .meta{flex:1;min-width:0}
 .meta b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meta small{display:block;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nums{text-align:right;font-size:13px;flex:none}
 .nums b{display:block;font-size:15px}
-.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;margin-top:4px;background:var(--card2);color:var(--mut);border:1px solid var(--line)}
-.s-sold{color:var(--pos);border-color:rgba(62,207,142,.4)}
-.s-grading{color:var(--blue);border-color:rgba(90,169,255,.4)}
-.s-listed{color:var(--acc);border-color:rgba(255,203,5,.4)}
-.drop{border:2px dashed var(--line);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;display:block;color:var(--mut)}
-.drop:hover{border-color:var(--acc)}
-.drop img{max-height:220px;max-width:100%;border-radius:8px;display:block;margin:0 auto 8px}
+.gr{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;margin-top:4px;background:#fff;color:#111}
+.gr.gold{background:linear-gradient(135deg,#f5d77a,#c9a227);color:#111}
+.gr.black{background:#000;color:#f5d77a;border:1px solid #c9a227}
+.gr.raw{background:var(--card2);color:var(--mut);font-weight:500}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;margin-top:4px;margin-left:4px;border:1px solid var(--line);color:var(--mut)}
+.tag.sold{color:var(--pos);border-color:rgba(62,207,142,.4)}
+.photo{text-align:center}
+.photo img{max-height:240px;max-width:100%;border-radius:10px;display:block;margin:0 auto 10px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.chip{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--txt)}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--txt)}
 .chip.on{border-color:var(--acc);color:var(--acc)}
-.calc{background:var(--card2);border-radius:9px;padding:10px 12px;font-size:14px;display:grid;grid-template-columns:1fr auto;gap:3px 12px}
-.calc .t{border-top:1px solid var(--line);padding-top:5px;margin-top:3px;font-weight:600}
+.calc{background:var(--card2);border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:4px 12px}
+.calc .t{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;font-weight:700;font-size:17px}
 table{width:100%;border-collapse:collapse;font-size:14px}
-td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
 th{color:var(--mut);font-weight:500;font-size:12px}
-td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#2b3040;border:1px solid var(--line);padding:9px 16px;border-radius:20px;z-index:20;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.n{text-align:right;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#2b3040;border:1px solid var(--line);padding:10px 16px;border-radius:20px;z-index:20;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
-.hint{font-size:12px;color:var(--mut);margin:4px 0 0}
-.empty{text-align:center;color:var(--mut);padding:30px 10px}
+.hint{font-size:12px;color:var(--mut);margin:6px 0 0}
+.empty{text-align:center;color:var(--mut);padding:26px 10px}
+.warn{background:rgba(255,203,5,.08);border:1px solid rgba(255,203,5,.4);border-radius:var(--r);padding:14px;margin-bottom:12px}
+details summary{cursor:pointer;color:var(--mut);font-size:13px;margin:4px 0 10px}
+ol{padding-left:20px;margin:6px 0}ol li{margin-bottom:6px}
+textarea{width:100%;height:120px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:9px;font:12px monospace;padding:8px}
 a{color:var(--blue)}
 svg text{fill:var(--mut);font-size:10px}
 .hide{display:none!important}
 </style>
 </head>
 <body>
-<header><h1>Poke<span>Trade</span></h1><span class="mut" style="font-size:12px" id="hdrInfo"></span></header>
+<header><h1>Poke<span>Trade</span></h1><span id="sync"></span></header>
 <main id="app"></main>
 <nav id="nav">
-  <button data-v="inv"><b>▤</b>Inventaire</button>
-  <button data-v="add"><b>＋</b>Ajouter</button>
+  <button data-v="home"><b>▤</b>Cartes</button>
   <button data-v="costs"><b>⚙</b>Frais</button>
+  <button data-v="add" class="add"><b>＋</b>Ajouter</button>
   <button data-v="stats"><b>◔</b>Bilan</button>
   <button data-v="settings"><b>☰</b>Réglages</button>
 </nav>
 <div class="toast" id="toast"></div>
-<input type="file" id="importFile" accept="application/json" class="hide">
 
 <script>
-/* ================= Stockage ================= */
-const DB={db:null,
-  open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('poketrade',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
-  get(k){if(!this.db){try{return Promise.resolve(JSON.parse(localStorage.getItem('pt_'+k)))}catch(e){return Promise.resolve(null)}}
-    return new Promise((res,rej)=>{const q=this.db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
-  set(k,v){if(!this.db){try{localStorage.setItem('pt_'+k,JSON.stringify(v))}catch(e){toast('Stockage plein : exporte une sauvegarde')}return Promise.resolve()}
-    return new Promise((res,rej)=>{const t=this.db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})}
-};
-let S={items:[],costs:[],settings:{model:'gemini-3.8-flash'}};
-const save=()=>DB.set('state',S).catch(e=>toast('Erreur sauvegarde : '+e.message));
-const getKey=()=>{try{return localStorage.getItem('pt_gemini_key')||''}catch(e){return S.settings.key||''}};
-const setKey=k=>{try{localStorage.setItem('pt_gemini_key',k)}catch(e){S.settings.key=k}};
+/* ---------- Réglages locaux ---------- */
+const LS={get(k,d=''){try{return localStorage.getItem('pt_'+k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem('pt_'+k,v)}catch(e){}}};
+const DEFAULT_MODEL='gemini-3.8-flash';
+const getKey=()=>LS.get('gemini_key');
+const getModel=()=>{const m=LS.get('model2',DEFAULT_MODEL);return m||DEFAULT_MODEL};
+const getSheet=()=>LS.get('sheet_url').trim();
 
-/* ================= Utils ================= */
+/* ---------- Miniatures (IndexedDB, sur ce téléphone) ---------- */
+const IDB={db:null,open(){return new Promise(res=>{try{const r=indexedDB.open('poketrade',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>res()}catch(e){res()}})},
+  get(k){return new Promise(res=>{if(!this.db)return res(null);const q=this.db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)})},
+  set(k,v){return new Promise(res=>{if(!this.db)return res();const t=this.db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=res})}};
+let thumbs={};
+const saveThumbs=()=>IDB.set('thumbs',thumbs);
+
+/* ---------- Utils ---------- */
 const $=s=>document.querySelector(s);
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>{const n=parseFloat(String(v??'').replace(/\s/g,'').replace(',','.'));return isFinite(n)?n:0};
+const has=v=>v!==''&&v!==null&&v!==undefined&&isFinite(parseFloat(String(v).replace(',','.')));
 const EUR=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
 const eur=n=>EUR.format(n||0);
 const sgn=n=>n>0.004?'pos':n<-0.004?'neg':'mut';
 const pct=n=>isFinite(n)?(n*100).toFixed(1).replace('.',',')+' %':'—';
-const today=()=>new Date().toISOString().slice(0,10);
-const D=s=>{if(!s)return null;const d=new Date(s+'T00:00:00');return isNaN(d)?null:d};
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2600)}
-function download(name,content,type){const b=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const D=s=>{if(!s)return null;const d=new Date(String(s).slice(0,10)+'T00:00:00');return isNaN(d)?null:d};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2800)}
 
-const TYPES={carte:'Carte',scelle:'Scellé',autre:'Autre'};
-const STATUS={stock:'En stock',grading:'En gradation',listed:'En vente',sold:'Vendu'};
-const CATS={bot:'Bot',cookgroup:'Cookgroup',proxies:'Proxies',autre:'Autre'};
-const FREQ={monthly:'Mensuel',yearly:'Annuel',once:'Ponctuel'};
+const COMPANIES=['Non gradée','PSA','CGC','PCA','Collect Aura','BGS','SGC','Autre'];
+const GRADES=['10 Black Label','10 Gold Label','10','9.5','9','8.5','8','7.5','7','6.5','6','5.5','5','4.5','4','3.5','3','2.5','2','1.5','1'];
+const TYPES=['Carte','Scellé','Autre'];
+const CATS=['Bot','Cookgroup','Proxies','Autre'];
+const FREQS=['Mensuel','Annuel','Ponctuel'];
 
-/* ================= Calculs ================= */
-function calc(it){
-  const cost=num(it.buyPrice)+num(it.buyFees)+num(it.gradeCost)+num(it.gradeShip);
-  const net=num(it.sellPrice)-num(it.sellFees)-num(it.sellShip);
-  const sold=it.status==='sold';
-  const profit=sold?net-cost:null;
-  const est=num(it.estValue);
-  return {cost,net,sold,profit,roi:sold&&cost>0?profit/cost:NaN,est,latent:!sold&&est>0?est-cost:null};
+/* ---------- Données (Google Sheet) ---------- */
+let data={cartes:[],frais:[],url:''};
+try{const c=JSON.parse(LS.get('cache','null'));if(c)data=c}catch(e){}
+function setData(j){data={cartes:j.cartes||[],frais:j.frais||[],url:j.url||data.url};LS.set('cache',JSON.stringify(data));LS.set('synced',new Date().toISOString());syncInfo()}
+function syncInfo(s){$('#sync').textContent=s||(getSheet()?'✓ Google Sheet':'⚠ Sheet non connecté')}
+async function sheetGet(){
+  const u=getSheet();if(!u)throw new Error('Google Sheet non connecté (Réglages)');
+  const r=await fetch(u,{redirect:'follow'});const j=await r.json().catch(()=>{throw new Error('Réponse illisible : vérifie l’URL et l’accès « Tout le monde »')});
+  if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);return j;
 }
-function addMonths(d,k){const day=d.getDate();const r=new Date(d.getFullYear(),d.getMonth()+k,1);const last=new Date(r.getFullYear(),r.getMonth()+1,0).getDate();r.setDate(Math.min(day,last));return r}
-function costInRange(c,from,to){
-  const start=D(c.start);if(!start)return 0;
-  const end=D(c.end)||new Date(8.64e15);const now=new Date();
-  const hi=new Date(Math.min(to,end,now));const lo=from;
-  const amt=num(c.amount);
-  if(c.freq==='once')return(start>=lo&&start<=hi)?amt:0;
-  const step=c.freq==='yearly'?12:1;let total=0;
-  for(let k=0;k<1200;k+=step){const d=addMonths(start,k);if(d>hi)break;if(d>=lo)total+=amt}
-  return total;
+async function sheetPost(action,payload){
+  const u=getSheet();if(!u)throw new Error('Connecte d’abord ton Google Sheet dans Réglages');
+  syncInfo('⟳ Enregistrement…');
+  try{const r=await fetch(u,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})});
+    const j=await r.json();if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);}
+  catch(e){syncInfo();throw e}
 }
-function periodRange(){
-  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
-  const end=new Date(y,m,n.getDate(),23,59,59);
-  switch(period.k){
-    case 'month':return[new Date(y,m,1),end];
-    case 'lastmonth':return[new Date(y,m-1,1),new Date(y,m,0,23,59,59)];
-    case 'year':return[new Date(y,0,1),end];
-    case 'lastyear':return[new Date(y-1,0,1),new Date(y-1,11,31,23,59,59)];
-    case 'custom':return[D(period.from)||new Date(2000,0,1),D(period.to)?new Date(D(period.to).getTime()+86399000):end];
-    default:return[new Date(2000,0,1),end];
-  }
+
+/* ---------- Calculs ---------- */
+function calc(c){const cost=num(c.buyPrice)+num(c.gradeCost);const sold=has(c.sellPrice);const profit=sold?num(c.sellPrice)-cost:null;return{cost,sold,profit,roi:sold&&cost>0?profit/cost:NaN}}
+function addMonths(d,k){const day=d.getDate();const r=new Date(d.getFullYear(),d.getMonth()+k,1);r.setDate(Math.min(day,new Date(r.getFullYear(),r.getMonth()+1,0).getDate()));return r}
+function costInRange(c,lo,hi){
+  const start=D(c.start);if(!start)return 0;const end=D(c.end);
+  const top=new Date(Math.min(hi,end?end.getTime()+86399000:8.64e15,Date.now()));const amt=num(c.amount);
+  if(c.freq==='Ponctuel')return start>=lo&&start<=top?amt:0;
+  const step=c.freq==='Annuel'?12:1;let t=0;
+  for(let k=0;k<1200;k+=step){const d=addMonths(start,k);if(d>top)break;if(d>=lo)t+=amt}return t;
 }
 const inR=(s,a,b)=>{const d=D(s);return d&&d>=a&&d<=b};
 
-/* ================= Gemini ================= */
-const PROMPT=`Tu es un expert du JCC Pokémon (cartes, produits scellés, accessoires) et du marché européen (Cardmarket).
-Identifie CHAQUE objet Pokémon visible sur la photo (une entrée par objet distinct).
-- Carte : nom exact, extension (nom dans la langue de la carte), numéro (ex. 025/165), langue (FR, EN, JP...), rareté, état visible (Mint, Near Mint, Excellent, Good, Played). Si la carte est dans un boîtier gradé (slab), indique la société (PSA, CGC, PCA, Collect Aura, BGS...) et la note.
-- Scellé : précise le type de produit dans le nom (Display, ETB, Coffret, Tripack, Booster, UPC...), l'extension et la langue.
-- prix_estime_eur : ordre de grandeur du prix de marché actuel en euros pour CET objet (état/langue/gradation), 0 si tu ne sais pas.
-N'invente rien : laisse une chaîne vide si une info n'est pas lisible, et baisse "confiance" en conséquence.`;
+/* ---------- Gemini ---------- */
+const PROMPT=`Tu es expert en cartes Pokémon (JCC) et en gradation (PSA, CGC, PCA, Collect Aura, BGS, SGC).
+Identifie chaque carte ou produit Pokémon visible sur la photo (une entrée par objet).
+Pour chaque carte, lis précisément :
+- nom : nom exact de la carte (ex. "Dracaufeu ex", "Pikachu VMAX")
+- numero : numéro imprimé en bas de la carte ou sur l'étiquette du boîtier (ex. "199/165", "TG05/TG30", "SVP 056")
+- serie : nom de l'extension/série (ex. "Écarlate et Violet 151", "Évolutions Prismatiques"), dans la langue de la carte
+- langue : FR, EN, JP, etc.
+- societe : si la carte est dans un boîtier gradé, la société lue sur l'étiquette (PSA, CGC, PCA, Collect Aura, BGS, SGC), sinon "Non gradée"
+- note : la note lue sur l'étiquette. Note de 1 à 10 (demi-points possibles). Distingue bien : "10" (étiquette classique/blanche), "10 Gold Label" (étiquette dorée, ex. CGC Pristine 10), "10 Black Label" (étiquette noire, ex. BGS Black Label ou CGC Perfect 10). Vide si non gradée.
+Utilise les informations écrites sur l'étiquette du boîtier en priorité. N'invente rien : chaîne vide si illisible, et confiance "basse".`;
 const SCHEMA={type:'OBJECT',properties:{objets:{type:'ARRAY',items:{type:'OBJECT',properties:{
-  type:{type:'STRING',enum:['carte','scelle','autre']},nom:{type:'STRING'},extension:{type:'STRING'},numero:{type:'STRING'},
-  langue:{type:'STRING'},rarete:{type:'STRING'},etat:{type:'STRING'},gradee:{type:'BOOLEAN'},societe_gradation:{type:'STRING'},
-  note_gradation:{type:'STRING'},prix_estime_eur:{type:'NUMBER'},confiance:{type:'STRING',enum:['haute','moyenne','basse']},remarques:{type:'STRING'}
-},required:['type','nom']}}},required:['objets']};
-
+  type:{type:'STRING',enum:TYPES},nom:{type:'STRING'},numero:{type:'STRING'},serie:{type:'STRING'},langue:{type:'STRING'},
+  societe:{type:'STRING',enum:COMPANIES},note:{type:'STRING'},confiance:{type:'STRING',enum:['haute','moyenne','basse']}
+},required:['type','nom','societe']}}},required:['objets']};
 async function gemini(parts,json=true){
-  const key=getKey();if(!key)throw new Error('Ajoute ta clé API Gemini dans Réglages');
-  const model=(S.settings.model||'gemini-3.8-flash').trim();
-  const body={contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.2}:{temperature:0}};
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(j.error?.message||('HTTP '+r.status));
+  const key=getKey();if(!key)throw new Error('Ajoute ta clé Gemini dans Réglages');
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getModel())}:generateContent`,
+    {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
+     body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.1}:{}})});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error?.message||('HTTP '+r.status));
   return(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
 }
-async function analyzePhoto(big){
-  const txt=await gemini([{text:PROMPT},{inline_data:{mime_type:'image/jpeg',data:big.split(',')[1]}}]);
-  let o;try{o=JSON.parse(txt)}catch(e){throw new Error('Réponse Gemini illisible')}
-  return o.objets||[];
-}
+function normGrade(g){g=String(g||'').trim();if(!g)return'';const l=g.toLowerCase();
+  if(l.includes('black'))return'10 Black Label';if(l.includes('gold')||l.includes('pristine'))return'10 Gold Label';
+  const m=g.replace(',','.').match(/\d+(\.5)?/);return m&&GRADES.includes(m[0])?m[0]:''}
 
-/* ================= Images ================= */
-function loadImage(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>res(img);img.onerror=()=>rej(new Error('Image illisible'));img.src=URL.createObjectURL(file)})}
+/* ---------- Images ---------- */
+function loadImage(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Image illisible'));i.src=URL.createObjectURL(f)})}
 function resize(img,max,q){const s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
 
-/* ================= État UI ================= */
-let view='inv',editId=null,draft=null,costEdit=null;
-let period={k:'year',from:'',to:''};
-let filt={q:'',status:'all',type:'all'};
+/* ---------- Navigation ---------- */
+let view='home',editId=null,draft=null,costEdit=null,period='all',filter='all',busy=false;
 const app=$('#app');
-
-function go(v,id=null){view=v;if(v==='add'){editId=id;draft={thumb:null,big:null,results:[],picked:-1}}render();window.scrollTo(0,0)}
+function go(v,id=null){view=v;if(v==='add'){editId=id;draft={thumb:null,big:null,results:[],picked:-1}}render();scrollTo(0,0)}
 function render(){
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view||(view==='add'&&b.dataset.v==='add')));
-  $('#hdrInfo').textContent=S.items.length+' objets';
-  ({inv:renderInv,add:renderForm,costs:renderCosts,stats:renderStats,settings:renderSettings})[view]();
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
+  ({home:renderHome,add:renderForm,costs:renderCosts,stats:renderStats,settings:renderSettings})[view]();
 }
+const noSheet=()=>getSheet()?'':`<div class="warn"><b>Connecte ton Google Sheet</b><br><span class="mut" style="font-size:13px">Sans ça, rien n'est enregistré.</span><br><br><button class="btn pri" data-act="goSettings">Configurer (5 min, une seule fois)</button></div>`;
+function gradeBadge(c){if(!c.gradeCompany||c.gradeCompany==='Non gradée'||!c.grade)return'<span class="gr raw">Raw</span>';
+  const cls=c.grade==='10 Gold Label'?'gold':c.grade==='10 Black Label'?'black':'';return`<span class="gr ${cls}">${esc(c.gradeCompany)} ${esc(c.grade)}</span>`}
 
-/* ================= Inventaire ================= */
-function renderInv(){
-  const q=filt.q.toLowerCase();
-  const list=S.items.filter(it=>(filt.status==='all'||it.status===filt.status)&&(filt.type==='all'||it.type===filt.type)
-    &&(!q||[it.name,it.set,it.number,it.lang].join(' ').toLowerCase().includes(q)))
-    .sort((a,b)=>String(b.buyDate||b.createdAt).localeCompare(String(a.buyDate||a.createdAt)));
-  let stockCost=0,stockEst=0,nStock=0;
-  S.items.forEach(it=>{const c=calc(it);if(!c.sold){nStock++;stockCost+=c.cost;stockEst+=c.est||c.cost}});
-  const opt=(o,v)=>Object.entries(o).map(([k,l])=>`<option value="${k}" ${v===k?'selected':''}>${l}</option>`).join('');
-  app.innerHTML=`
+/* ---------- Accueil ---------- */
+function totals(lo,hi){
+  const ins=c=>!lo||inR(c,lo,hi);
+  const sold=data.cartes.filter(c=>has(c.sellPrice)&&ins(c.sellDate||c.buyDate));
+  let ventes=0,coutVendu=0;sold.forEach(c=>{ventes+=num(c.sellPrice);coutVendu+=calc(c).cost});
+  const bought=data.cartes.filter(c=>ins(c.buyDate));
+  const achats=bought.reduce((s,c)=>s+num(c.buyPrice),0),grad=bought.reduce((s,c)=>s+num(c.gradeCost),0);
+  const L=lo||new Date(2000,0,1),H=hi||new Date(8.64e15);
+  const frais=data.frais.reduce((s,f)=>s+costInRange(f,L,H),0);
+  const marge=ventes-coutVendu,net=marge-frais;
+  const stock=data.cartes.filter(c=>!has(c.sellPrice)).reduce((s,c)=>s+calc(c).cost,0);
+  return{sold,ventes,coutVendu,achats,grad,frais,marge,net,roi:(coutVendu+frais)>0?net/(coutVendu+frais):NaN,cash:ventes-achats-grad-frais,stock,nbStock:data.cartes.length-data.cartes.filter(c=>has(c.sellPrice)).length};
+}
+function renderHome(){
+  const t=totals();
+  let list=data.cartes.slice().reverse();
+  if(filter==='stock')list=list.filter(c=>!has(c.sellPrice));if(filter==='sold')list=list.filter(c=>has(c.sellPrice));
+  app.innerHTML=`${noSheet()}
   <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><small>En stock</small><b>${nStock}</b></div>
-    <div class="kpi"><small>Coût immobilisé</small><b>${eur(stockCost)}</b></div>
-    <div class="kpi"><small>Valeur estimée</small><b>${eur(stockEst)}</b></div>
-    <div class="kpi"><small>Plus-value latente</small><b class="${sgn(stockEst-stockCost)}">${eur(stockEst-stockCost)}</b></div>
+    <div class="kpi hero"><small>Bénéfice net (frais annexes inclus)</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>ROI ${pct(t.roi)}</small></div>
+    <div class="kpi"><small>Ventes</small><b>${eur(t.ventes)}</b></div>
+    <div class="kpi"><small>Achats + gradation</small><b>${eur(t.achats+t.grad)}</b></div>
+    <div class="kpi"><small>Frais annexes</small><b>${eur(t.frais)}</b></div>
+    <div class="kpi"><small>Stock (${t.nbStock})</small><b>${eur(t.stock)}</b></div>
   </div>
-  <div class="card" style="padding:10px">
-    <div class="row">
-      <input id="fq" placeholder="Rechercher (nom, extension, n°)…" value="${esc(filt.q)}" style="margin:0;flex:2">
-      <select id="fs" style="margin:0"><option value="all">Tous statuts</option>${opt(STATUS,filt.status)}</select>
-      <select id="ft" style="margin:0"><option value="all">Tous types</option>${opt(TYPES,filt.type)}</select>
-    </div>
-  </div>
-  ${list.length?list.map(itemRow).join(''):`<div class="empty">Aucun objet.<br><br><button class="btn pri" data-act="new">📷 Ajouter un objet</button></div>`}`;
-  $('#fq').oninput=e=>{filt.q=e.target.value;const p=e.target.selectionStart;renderInv();const f=$('#fq');f.focus();f.setSelectionRange(p,p)};
-  $('#fs').onchange=e=>{filt.status=e.target.value;renderInv()};
-  $('#ft').onchange=e=>{filt.type=e.target.value;renderInv()};
+  <button class="btn pri big" data-act="new" style="margin-bottom:14px">📷 Ajouter une carte</button>
+  <div class="bar" style="margin-bottom:10px">${[['all','Toutes'],['stock','En stock'],['sold','Vendues']].map(([k,l])=>`<button class="chip ${filter===k?'on':''}" data-act="filter" data-k="${k}">${l}</button>`).join('')}
+    <button class="chip" data-act="refresh" style="margin-left:auto">⟳</button></div>
+  ${list.length?list.map(row).join(''):'<div class="empty">Aucune carte pour l’instant.</div>'}`;
 }
-function itemRow(it){
-  const c=calc(it);
-  const sub=[TYPES[it.type],it.set,it.number,it.lang,it.grade?`${it.gradeCompany||''} ${it.grade}`.trim():''].filter(Boolean).join(' · ');
-  const right=c.sold?`<b class="${sgn(c.profit)}">${c.profit>=0?'+':''}${eur(c.profit)}</b><span class="mut">${pct(c.roi)}</span>`
-    :c.latent!==null?`<b class="${sgn(c.latent)}">${c.latent>=0?'+':''}${eur(c.latent)}</b><span class="mut">latent</span>`:`<b>${eur(c.cost)}</b><span class="mut">coût</span>`;
-  return `<div class="item" data-act="edit" data-id="${it.id}">
-    ${it.thumb?`<img class="thumb" src="${it.thumb}" alt="">`:`<div class="thumb">${it.type==='scelle'?'📦':'🃏'}</div>`}
-    <div class="meta"><b>${esc(it.name||'Sans nom')}${num(it.qty)>1?` <span class="mut">×${num(it.qty)}</span>`:''}</b><small>${esc(sub)}</small>
-      <span class="badge s-${it.status}">${STATUS[it.status]}</span></div>
-    <div class="nums">${right}<div class="mut" style="font-size:12px">coût ${eur(c.cost)}</div></div></div>`;
+function row(c){
+  const k=calc(c);
+  const right=k.sold?`<b class="${sgn(k.profit)}">${k.profit>=0?'+':''}${eur(k.profit)}</b><span class="mut">vendue ${eur(num(c.sellPrice))}</span>`:`<b>${eur(k.cost)}</b><span class="mut">coût</span>`;
+  return`<div class="item" data-act="edit" data-id="${esc(c.id)}">${thumbs[c.id]?`<img class="thumb" src="${thumbs[c.id]}" alt="">`:`<div class="thumb">${c.type==='Scellé'?'📦':'🃏'}</div>`}
+    <div class="meta"><b>${esc(c.name||'Sans nom')}</b><small>${esc([c.number,c.set,c.lang].filter(Boolean).join(' · '))}</small>${gradeBadge(c)}${k.sold?'<span class="tag sold">Vendue</span>':''}</div>
+    <div class="nums">${right}</div></div>`;
 }
 
-/* ================= Formulaire objet ================= */
-function F(label,name,val,type='text',extra=''){return `<label>${label}<input name="${name}" type="${type}" value="${esc(val??'')}" ${type==='number'?'step="0.01" inputmode="decimal"':''} ${extra}></label>`}
-function SEL(label,name,obj,val){return `<label>${label}<select name="${name}">${Object.entries(obj).map(([k,l])=>`<option value="${k}" ${val===k?'selected':''}>${l}</option>`).join('')}</select></label>`}
+/* ---------- Formulaire carte ---------- */
+const opts=(arr,v)=>arr.map(x=>`<option ${String(v)===x?'selected':''}>${x}</option>`).join('');
 function renderForm(){
-  const it=editId?S.items.find(x=>x.id===editId):null;
-  const v=it||{type:'carte',qty:1,status:'stock',buyDate:today(),lang:'FR'};
-  const img=draft.thumb||(it&&it.thumb);
-  app.innerHTML=`
-  <h2>${it?'Modifier':'Ajouter'} un objet</h2>
-  <div class="card">
-    <div class="drop" style="cursor:default">${img?`<img src="${img}" alt="">`:`<div style="font-size:30px">📷</div><small>Cartes, slabs, scellés… plusieurs objets possibles</small>`}
-      <div class="bar" style="justify-content:center;margin-top:10px">
-        <label class="btn" for="photoCam" style="margin:0;color:var(--txt)">📷 Prendre une photo</label>
-        <label class="btn" for="photoLib" style="margin:0;color:var(--txt)">🖼️ Choisir dans l'album</label>
-      </div>
+  const c=editId?data.cartes.find(x=>String(x.id)===String(editId)):null;
+  const v=c||{type:'Carte',gradeCompany:'Non gradée',buyDate:today(),lang:'FR'};
+  const img=draft.thumb||(c&&thumbs[c.id]);
+  app.innerHTML=`${noSheet()}
+  <div class="card photo">
+    ${img?`<img src="${img}" alt="">`:'<div style="font-size:34px">🃏</div><p class="mut" style="margin:4px 0 12px">Photo de la carte ou du boîtier gradé</p>'}
+    <div class="row">
+      <label class="btn" for="pCam" style="margin:0;color:var(--txt)">📷 Photo</label>
+      <label class="btn" for="pLib" style="margin:0;color:var(--txt)">🖼️ Album</label>
     </div>
-    <input type="file" id="photoCam" accept="image/*" capture="environment" class="hide">
-    <input type="file" id="photoLib" accept="image/*" class="hide">
-    <div class="bar" style="margin-top:10px">
-      <button class="btn pri" id="btnAnalyze" ${draft.big?'':'disabled'}>✨ Analyser avec Gemini</button>
-      <span class="hint" id="anaMsg">${getKey()?'':'Clé API à renseigner dans Réglages'}</span>
-    </div>
-    <div class="chips" id="chips">${draft.results.map((r,i)=>`<button class="chip ${draft.picked===i?'on':''}" data-act="pick" data-i="${i}">${esc(r.nom||'?')}${r.numero?' · '+esc(r.numero):''}${r.prix_estime_eur?' · ~'+eur(r.prix_estime_eur):''}</button>`).join('')}</div>
-    ${draft.results.length>1?'<p class="hint">Plusieurs objets détectés : clique sur un objet, enregistre, puis passe au suivant.</p>':''}
+    <input type="file" id="pCam" accept="image/*" capture="environment" class="hide"><input type="file" id="pLib" accept="image/*" class="hide">
+    <p class="hint" id="aMsg">${getKey()?'Gemini remplit la fiche automatiquement.':'⚠ Ajoute ta clé Gemini dans Réglages.'}</p>
+    <div class="chips" style="justify-content:center">${draft.results.length>1?draft.results.map((r,i)=>`<button class="chip ${draft.picked===i?'on':''}" data-act="pick" data-i="${i}">${esc(r.nom)}</button>`).join(''):''}</div>
   </div>
   <form id="f" autocomplete="off">
     <div class="card">
-      <h3 style="margin-top:0">Identification</h3>
-      <div class="row">${SEL('Type','type',TYPES,v.type)}${F('Quantité','qty',v.qty??1,'number','min="1" step="1"')}</div>
-      ${F('Nom','name',v.name,'text','required')}
-      <div class="row">${F('Extension','set',v.set)}${F('Numéro','number',v.number)}</div>
-      <div class="row">${F('Langue','lang',v.lang)}${F('Rareté','rarity',v.rarity)}${F('État','condition',v.condition)}</div>
-      <p class="hint" id="cmLink"></p>
+      <label>Nom de la carte<input name="name" value="${esc(v.name)}" required></label>
+      <div class="row"><label>Numéro<input name="number" value="${esc(v.number)}"></label><label>Série<input name="set" value="${esc(v.set)}"></label></div>
+      <div class="row"><label>Gradation<select name="gradeCompany">${opts(COMPANIES,v.gradeCompany||'Non gradée')}</select></label>
+        <label id="gradeL">Note<select name="grade"><option value="">—</option>${opts(GRADES,v.grade)}</select></label></div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">Achat</h3>
-      <div class="row">${F('Prix d\'achat total (€)','buyPrice',v.buyPrice,'number')}${F('Frais d\'achat / port (€)','buyFees',v.buyFees,'number')}</div>
-      <div class="row">${F('Date d\'achat','buyDate',v.buyDate,'date')}${F('Acheté où / à qui','buyFrom',v.buyFrom)}</div>
-    </div>
-    <div class="card" id="gradeBox">
-      <h3 style="margin-top:0">Gradation</h3>
-      <div class="row">${F('Société','gradeCompany',v.gradeCompany,'text','list="gco"')}${F('Note obtenue','grade',v.grade)}</div>
-      <datalist id="gco"><option>PSA</option><option>CGC</option><option>PCA</option><option>Collect Aura</option><option>BGS</option><option>SFG</option></datalist>
-      <div class="row">${F('Coût gradation (€)','gradeCost',v.gradeCost,'number')}${F('Envoi / assurance (€)','gradeShip',v.gradeShip,'number')}</div>
-    </div>
-    <div class="card">
-      <h3 style="margin-top:0">Statut & vente</h3>
-      <div class="row">${SEL('Statut','status',STATUS,v.status)}${F('Valeur estimée actuelle (€)','estValue',v.estValue,'number')}</div>
-      <div class="row">${F('Prix de vente (€)','sellPrice',v.sellPrice,'number')}${F('Date de vente','sellDate',v.sellDate,'date')}</div>
-      <div class="row">${F('Frais plateforme (€)','sellFees',v.sellFees,'number')}${F('Frais d\'envoi payés (€)','sellShip',v.sellShip,'number')}${F('Plateforme','sellPlatform',v.sellPlatform,'text','list="plat"')}</div>
-      <datalist id="plat"><option>Cardmarket</option><option>eBay</option><option>Vinted</option><option>Leboncoin</option><option>Main propre</option><option>Discord</option></datalist>
-      <label>Notes<textarea name="notes">${esc(v.notes||'')}</textarea></label>
+      <div class="row"><label>Prix d'achat (€)<input name="buyPrice" inputmode="decimal" value="${esc(v.buyPrice)}" placeholder="0"></label>
+        <label id="gcL">Coût gradation (€)<input name="gradeCost" inputmode="decimal" value="${esc(v.gradeCost)}" placeholder="0"></label></div>
+      <label>Prix de vente (€) <span class="mut">— vide si pas encore vendue</span><input name="sellPrice" inputmode="decimal" value="${esc(v.sellPrice)}"></label>
       <div class="calc" id="live"></div>
+      <details style="margin-top:10px"><summary>Plus de détails (dates, langue, type)</summary>
+        <div class="row"><label>Acheté le<input type="date" name="buyDate" value="${esc(v.buyDate)}"></label><label>Vendu le<input type="date" name="sellDate" value="${esc(v.sellDate)}"></label></div>
+        <div class="row"><label>Langue<input name="lang" value="${esc(v.lang)}"></label><label>Type<select name="type">${opts(TYPES,v.type)}</select></label></div>
+      </details>
     </div>
-    <div class="bar">
-      <button class="btn pri" type="submit">Enregistrer</button>
-      <button class="btn" type="button" data-act="cancel">Annuler</button>
-      ${it&&num(it.qty)>1&&it.status!=='sold'?`<button class="btn" type="button" data-act="split">Sortir 1 unité</button>`:''}
-      ${it?`<button class="btn dng" type="button" data-act="del">Supprimer</button>`:''}
-    </div>
+    <button class="btn pri big" type="submit" id="saveBtn">Enregistrer dans le Sheet</button>
+    <div class="bar" style="margin-top:10px"><button class="btn" type="button" data-act="cancel">Annuler</button>${c?'<button class="btn dng" type="button" data-act="del">Supprimer</button>':''}</div>
   </form>`;
   const f=$('#f');
-  const upd=()=>{
-    const o=readForm();const c=calc(o);
-    $('#gradeBox').classList.toggle('hide',o.type!=='carte');
-    const q=[o.name,o.number].filter(Boolean).join(' ');
-    $('#cmLink').innerHTML=q?`Vérifier le prix : <a href="https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(o.name||'')}" target="_blank" rel="noopener">Cardmarket</a> · <a href="https://www.ebay.fr/sch/i.html?LH_Sold=1&LH_Complete=1&_nkw=${encodeURIComponent('pokemon '+q)}" target="_blank" rel="noopener">eBay (vendus)</a>`:'';
-    let h=`<span>Coût de revient</span><b>${eur(c.cost)}</b>`;
-    if(num(o.qty)>1)h+=`<span class="mut">soit par unité</span><span class="mut">${eur(c.cost/num(o.qty))}</span>`;
-    if(num(o.sellPrice)>0){h+=`<span>Net encaissé</span><b>${eur(c.net)}</b><span class="t">Bénéfice</span><b class="t ${sgn(c.net-c.cost)}">${eur(c.net-c.cost)} · ${pct(c.cost?(c.net-c.cost)/c.cost:NaN)}</b>`}
-    else if(c.est>0){h+=`<span class="t">Plus-value latente</span><b class="t ${sgn(c.est-c.cost)}">${eur(c.est-c.cost)}</b>`}
-    $('#live').innerHTML=h;
-  };
-  f.oninput=upd;upd();
-  f.onsubmit=e=>{e.preventDefault();saveItem()};
-  $('#photoCam').onchange=onPhoto;$('#photoLib').onchange=onPhoto;
-  $('#btnAnalyze').onclick=runAnalyze;
+  const upd=()=>{const o=read();const k=calc(o);
+    const graded=o.gradeCompany!=='Non gradée';$('#gradeL').classList.toggle('hide',!graded);
+    let h=`<span>Coût total</span><b>${eur(k.cost)}</b>`;
+    h+=k.sold?`<span class="t">Bénéfice</span><b class="t ${sgn(k.profit)}">${k.profit>=0?'+':''}${eur(k.profit)} · ${pct(k.roi)}</b>`:`<span class="mut">Statut</span><span class="mut">En stock</span>`;
+    $('#live').innerHTML=h};
+  f.oninput=upd;f.onchange=upd;upd();
+  f.onsubmit=e=>{e.preventDefault();saveCard()};
+  $('#pCam').onchange=onPhoto;$('#pLib').onchange=onPhoto;
 }
-function readForm(){
-  const o={};new FormData($('#f')).forEach((v,k)=>o[k]=typeof v==='string'?v.trim():v);
-  ['qty','buyPrice','buyFees','gradeCost','gradeShip','estValue','sellPrice','sellFees','sellShip'].forEach(k=>o[k]=num(o[k]));
-  if(o.qty<1)o.qty=1;return o;
-}
+function read(){const o={};new FormData($('#f')).forEach((v,k)=>o[k]=String(v).trim());
+  ['buyPrice','gradeCost','sellPrice'].forEach(k=>{o[k]=o[k]===''?'':num(o[k])});if(o.gradeCompany==='Non gradée')o.grade='';return o}
+function fill(o){const f=$('#f');Object.entries(o).forEach(([k,v])=>{if(f.elements[k]&&v!==undefined&&v!==null&&v!=='')f.elements[k].value=v});f.oninput()}
 async function onPhoto(e){
   const file=e.target.files[0];if(!file)return;
-  try{const img=await loadImage(file);draft.thumb=resize(img,360,.75);draft.big=resize(img,1400,.85);draft.results=[];draft.picked=-1;
-    const keep=readForm();renderForm();fillForm(keep);if(getKey())runAnalyze();}
+  try{const img=await loadImage(file);draft.thumb=resize(img,300,.72);draft.big=resize(img,1600,.88);draft.results=[];
+    const keep=read();renderForm();fill(keep);if(getKey())analyze();}
   catch(err){toast(err.message)}
 }
-function fillForm(o){const f=$('#f');if(!f)return;Object.entries(o).forEach(([k,v])=>{if(f.elements[k]!==undefined&&v!==undefined&&v!==null&&v!=='')f.elements[k].value=v});f.oninput()}
-async function runAnalyze(){
-  const b=$('#btnAnalyze'),m=$('#anaMsg');b.disabled=true;m.textContent='Analyse en cours…';
-  const keep=readForm();
-  try{draft.results=await analyzePhoto(draft.big);draft.picked=-1;
-    renderForm();fillForm(keep);
-    if(draft.results.length)pick(0);else $('#anaMsg').textContent='Aucun objet reconnu, remplis à la main.';}
-  catch(err){m.textContent='Erreur : '+err.message;b.disabled=false}
+async function analyze(){
+  const m=$('#aMsg');m.textContent='✨ Gemini lit la carte…';
+  try{const txt=await gemini([{text:PROMPT},{inline_data:{mime_type:'image/jpeg',data:draft.big.split(',')[1]}}]);
+    let o;try{o=JSON.parse(txt)}catch(e){throw new Error('réponse illisible')}
+    draft.results=o.objets||[];const keep=read();renderForm();fill(keep);
+    if(draft.results.length)pick(0);else $('#aMsg').textContent='Aucune carte reconnue, remplis à la main.';}
+  catch(err){m.textContent='Erreur Gemini : '+err.message}
 }
 function pick(i){
   const r=draft.results[i];if(!r)return;draft.picked=i;
-  document.querySelectorAll('.chip').forEach((c,j)=>c.classList.toggle('on',j===i));
-  const f=$('#f');const qty=num(f.elements.qty.value)||1;
-  const o={type:r.type,name:r.nom,set:r.extension,number:r.numero,lang:r.langue,rarity:r.rarete,condition:r.etat};
-  if(r.gradee){o.gradeCompany=r.societe_gradation;o.grade=r.note_gradation}
-  if(r.prix_estime_eur>0)o.estValue=Math.round(r.prix_estime_eur*qty*100)/100;
-  ['name','set','number','rarity','condition','gradeCompany','grade'].forEach(k=>{if(f.elements[k])f.elements[k].value=''});
-  fillForm(o);
-  $('#anaMsg').textContent=`Confiance : ${r.confiance||'?'}${r.remarques?' — '+r.remarques:''}. Prix estimé = indicatif, vérifie-le.`;
+  document.querySelectorAll('.chip[data-act=pick]').forEach((c,j)=>c.classList.toggle('on',j===i));
+  const f=$('#f');['name','number','set'].forEach(k=>f.elements[k].value='');
+  const comp=COMPANIES.includes(r.societe)?r.societe:'Non gradée';
+  fill({type:r.type,name:r.nom,number:r.numero,set:r.serie,lang:r.langue,gradeCompany:comp});
+  f.elements.grade.value=comp==='Non gradée'?'':normGrade(r.note);f.oninput();
+  $('#aMsg').textContent=`✓ Fiche remplie (confiance ${r.confiance||'?'}). Vérifie et ajoute tes prix.`;
 }
-function saveItem(){
-  const o=readForm();
-  if(o.sellPrice>0&&o.sellDate&&o.status!=='sold')o.status='sold';
-  if(o.status==='sold'&&!o.sellDate)o.sellDate=today();
-  if(editId){const it=S.items.find(x=>x.id===editId);Object.assign(it,o);if(draft.thumb)it.thumb=draft.thumb}
-  else S.items.push({id:uid(),createdAt:new Date().toISOString(),thumb:draft.thumb,...o});
-  save();toast('Enregistré ✓');
-  const rest=draft.results.length>1&&!editId;
-  if(rest){const t=draft.thumb,b=draft.big,res=draft.results,p=draft.picked;editId=null;draft={thumb:t,big:b,results:res,picked:-1};renderForm();
-    const nxt=res.findIndex((_,i)=>i>p);if(nxt>=0)pick(nxt);}
-  else go('inv');
-}
-function splitItem(){
-  const it=S.items.find(x=>x.id===editId);if(!it||num(it.qty)<=1)return;
-  const q=num(it.qty),r=1/q;
-  const one={...it,id:uid(),createdAt:new Date().toISOString(),qty:1};
-  ['buyPrice','buyFees','gradeCost','gradeShip','estValue'].forEach(k=>{const tot=num(it[k]);one[k]=Math.round(tot*r*100)/100;it[k]=Math.round((tot-one[k])*100)/100});
-  it.qty=q-1;S.items.push(one);save();toast('1 unité sortie du lot');go('add',one.id);
+async function saveCard(){
+  if(busy)return;const o=read();
+  if(has(o.sellPrice)&&!o.sellDate)o.sellDate=today();
+  if(!has(o.sellPrice))o.sellDate='';
+  o.id=editId||uid();
+  const b=$('#saveBtn');busy=true;b.disabled=true;b.textContent='Enregistrement…';
+  try{await sheetPost('saveCard',{data:o});
+    if(draft.thumb){thumbs[o.id]=draft.thumb;saveThumbs()}
+    toast('✓ Enregistrée dans le Google Sheet');
+    if(!editId&&draft.results.length>1&&draft.picked<draft.results.length-1){const nx=draft.picked+1;const keepT=draft.thumb,keepB=draft.big,res=draft.results;
+      draft={thumb:keepT,big:keepB,results:res,picked:-1};renderForm();pick(nx);}
+    else go('home');}
+  catch(err){toast('Erreur : '+err.message);b.disabled=false;b.textContent='Enregistrer dans le Sheet'}
+  finally{busy=false}
 }
 
-/* ================= Frais récurrents ================= */
+/* ---------- Frais ---------- */
 function renderCosts(){
-  const c=costEdit?S.costs.find(x=>x.id===costEdit)||{}:{cat:'bot',freq:'monthly',start:today()};
-  let monthly=0;S.costs.forEach(x=>{if(x.end&&D(x.end)<new Date())return;if(x.freq==='monthly')monthly+=num(x.amount);if(x.freq==='yearly')monthly+=num(x.amount)/12});
-  const y0=new Date(new Date().getFullYear(),0,1);
-  const ytd=S.costs.reduce((s,x)=>s+costInRange(x,y0,new Date()),0);
-  const all=S.costs.reduce((s,x)=>s+costInRange(x,new Date(2000,0,1),new Date()),0);
-  const opt=(o,v)=>Object.entries(o).map(([k,l])=>`<option value="${k}" ${v===k?'selected':''}>${l}</option>`).join('');
-  app.innerHTML=`
-  <h2>Frais fixes</h2>
-  <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><small>Coût mensuel actuel</small><b>${eur(monthly)}</b></div>
-    <div class="kpi"><small>Payé cette année</small><b>${eur(ytd)}</b></div>
-    <div class="kpi"><small>Payé depuis le début</small><b>${eur(all)}</b></div>
-  </div>
+  const c=costEdit?data.frais.find(x=>String(x.id)===String(costEdit))||{}:{cat:'Bot',freq:'Mensuel',start:today()};
+  let monthly=0;data.frais.forEach(x=>{if(x.end&&D(x.end)<new Date())return;if(x.freq==='Mensuel')monthly+=num(x.amount);if(x.freq==='Annuel')monthly+=num(x.amount)/12});
+  const all=data.frais.reduce((s,x)=>s+costInRange(x,new Date(2000,0,1),new Date()),0);
+  app.innerHTML=`${noSheet()}<h2>Frais annexes</h2>
+  <div class="kpis" style="margin-bottom:12px"><div class="kpi"><small>Par mois actuellement</small><b>${eur(monthly)}</b></div><div class="kpi"><small>Total payé</small><b>${eur(all)}</b></div></div>
   <form class="card" id="cf">
-    <h3 style="margin-top:0">${costEdit?'Modifier':'Nouveau'} frais</h3>
-    <div class="bar" style="margin-bottom:10px">${Object.entries(CATS).map(([k,l])=>`<button type="button" class="chip" data-act="preset" data-k="${k}">${l}</button>`).join('')}</div>
-    <div class="row"><label>Nom<input name="name" value="${esc(c.name||'')}" placeholder="ex. Bot Stellar, CG Pokémon FR…" required></label>
-      <label>Catégorie<select name="cat">${opt(CATS,c.cat)}</select></label></div>
-    <div class="row"><label>Montant (€)<input name="amount" type="number" step="0.01" inputmode="decimal" value="${esc(c.amount??'')}" required></label>
-      <label>Fréquence<select name="freq">${opt(FREQ,c.freq)}</select></label></div>
-    <div class="row"><label>Début (1er paiement)<input name="start" type="date" value="${esc(c.start||'')}" required></label>
-      <label>Fin (laisser vide si actif)<input name="end" type="date" value="${esc(c.end||'')}"></label></div>
-    <div class="bar"><button class="btn pri">${costEdit?'Mettre à jour':'Ajouter'}</button>
-      ${costEdit?'<button type="button" class="btn" data-act="costCancel">Annuler</button><button type="button" class="btn dng" data-act="costDel">Supprimer</button>':''}</div>
-    <p class="hint">Mensuel : prélevé chaque mois à la date de début. Annuel : chaque année. Ponctuel : une seule fois (licence, achat de proxies one-shot…).</p>
+    <div class="bar" style="margin-bottom:10px">${CATS.map(k=>`<button type="button" class="chip ${c.cat===k?'on':''}" data-act="cat" data-k="${k}">${k}</button>`).join('')}</div>
+    <input type="hidden" name="cat" value="${esc(c.cat||'Bot')}">
+    <label>Nom<input name="name" value="${esc(c.name||'')}" placeholder="ex. Bot, CG Pokémon FR, Proxies résidentiels" required></label>
+    <div class="row"><label>Montant (€)<input name="amount" inputmode="decimal" value="${esc(c.amount??'')}" required></label><label>Fréquence<select name="freq">${opts(FREQS,c.freq)}</select></label></div>
+    <div class="row"><label>Depuis le<input type="date" name="start" value="${esc(c.start||'')}" required></label><label>Jusqu'au <span class="mut">(vide = en cours)</span><input type="date" name="end" value="${esc(c.end||'')}"></label></div>
+    <button class="btn pri big" id="cBtn">${costEdit?'Mettre à jour':'Ajouter ce frais'}</button>
+    ${costEdit?'<div class="bar" style="margin-top:10px"><button type="button" class="btn" data-act="costCancel">Annuler</button><button type="button" class="btn dng" data-act="costDel">Supprimer</button></div>':''}
   </form>
-  ${S.costs.length?`<div class="card" style="padding:6px 10px"><table><tr><th>Frais</th><th>Fréquence</th><th class="n">Montant</th><th class="n">Total payé</th></tr>
-  ${S.costs.slice().sort((a,b)=>a.cat.localeCompare(b.cat)).map(x=>`<tr data-act="costEdit" data-id="${x.id}" style="cursor:pointer">
-    <td><b>${esc(x.name)}</b><br><small class="mut">${CATS[x.cat]}${x.end?' · fin '+x.end:''}</small></td><td>${FREQ[x.freq]}</td>
-    <td class="n">${eur(num(x.amount))}</td><td class="n">${eur(costInRange(x,new Date(2000,0,1),new Date()))}</td></tr>`).join('')}</table></div>`
-  :'<div class="empty">Ajoute ton bot, ton cookgroup, tes proxies…</div>'}`;
-  $('#cf').onsubmit=e=>{e.preventDefault();const o={};new FormData(e.target).forEach((v,k)=>o[k]=String(v).trim());o.amount=num(o.amount);
-    if(costEdit)Object.assign(S.costs.find(x=>x.id===costEdit),o);else S.costs.push({id:uid(),...o});
-    costEdit=null;save();toast('Frais enregistré ✓');renderCosts()};
+  ${data.frais.length?`<div class="card" style="padding:4px 10px"><table>${data.frais.map(x=>`<tr data-act="costEdit" data-id="${esc(x.id)}" style="cursor:pointer"><td><b>${esc(x.name)}</b><br><small class="mut">${esc(x.cat)} · ${esc(x.freq)}${x.end?' · fini':''}</small></td><td class="n">${eur(num(x.amount))}</td><td class="n mut">${eur(costInRange(x,new Date(2000,0,1),new Date()))}<br><small>payé</small></td></tr>`).join('')}</table></div>`:'<div class="empty">Ajoute ton bot, ton cookgroup, tes proxies…</div>'}`;
+  $('#cf').onsubmit=async e=>{e.preventDefault();if(busy)return;const o={};new FormData(e.target).forEach((v,k)=>o[k]=String(v).trim());o.amount=num(o.amount);o.id=costEdit||uid();
+    const b=$('#cBtn');busy=true;b.disabled=true;b.textContent='Enregistrement…';
+    try{await sheetPost('saveCost',{data:o});costEdit=null;toast('✓ Frais enregistré');renderCosts()}catch(err){toast('Erreur : '+err.message);b.disabled=false;b.textContent='Réessayer'}finally{busy=false}};
 }
 
-/* ================= Bilan ================= */
+/* ---------- Bilan ---------- */
+function range(){const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  return{all:[null,null],month:[new Date(y,m,1),new Date(y,m+1,0,23,59,59)],lastmonth:[new Date(y,m-1,1),new Date(y,m,0,23,59,59)],year:[new Date(y,0,1),new Date(y,11,31,23,59,59)],lastyear:[new Date(y-1,0,1),new Date(y-1,11,31,23,59,59)]}[period]}
 function renderStats(){
-  const [a,b]=periodRange();
-  const sold=S.items.filter(it=>it.status==='sold'&&inR(it.sellDate,a,b));
-  let ca=0,net=0,cogs=0;sold.forEach(it=>{const c=calc(it);ca+=num(it.sellPrice);net+=c.net;cogs+=c.cost});
-  const marge=net-cogs;
-  const fixed=S.costs.reduce((s,c)=>s+costInRange(c,a,b),0);
-  const profit=marge-fixed;
-  const spent=S.items.filter(it=>inR(it.buyDate,a,b)).reduce((s,it)=>s+calc(it).cost,0);
-  const cash=net-spent-fixed;
-  const byCat={};S.costs.forEach(c=>{const v=costInRange(c,a,b);if(v)byCat[c.cat]=(byCat[c.cat]||0)+v});
-  const byType={};sold.forEach(it=>{const c=calc(it);const t=byType[it.type]||(byType[it.type]={n:0,ca:0,p:0,cost:0});t.n++;t.ca+=num(it.sellPrice);t.p+=c.profit;t.cost+=c.cost});
-  // 12 derniers mois
-  const now=new Date();const months=[];
-  for(let i=11;i>=0;i--){const m0=new Date(now.getFullYear(),now.getMonth()-i,1),m1=new Date(now.getFullYear(),now.getMonth()-i+1,0,23,59,59);
-    const mg=S.items.filter(it=>it.status==='sold'&&inR(it.sellDate,m0,m1)).reduce((s,it)=>s+calc(it).profit,0);
-    const fx=S.costs.reduce((s,c)=>s+costInRange(c,m0,m1),0);
-    months.push({label:m0.toLocaleDateString('fr-FR',{month:'short'}).replace('.',''),val:mg-fx})}
-  const top=sold.map(it=>({it,c:calc(it)})).sort((x,y)=>y.c.profit-x.c.profit);
-  const P={all:'Tout',month:'Ce mois',lastmonth:'Mois dernier',year:'Cette année',lastyear:'Année dernière',custom:'Personnalisé'};
-  app.innerHTML=`
-  <h2>Bilan</h2>
-  <div class="card" style="padding:10px"><div class="row">
-    <select id="pk" style="margin:0">${Object.entries(P).map(([k,l])=>`<option value="${k}" ${period.k===k?'selected':''}>${l}</option>`).join('')}</select>
-    ${period.k==='custom'?`<input type="date" id="pf" value="${period.from}" style="margin:0"><input type="date" id="pt" value="${period.to}" style="margin:0">`:''}
-  </div></div>
+  const [lo,hi]=range();const t=totals(lo,hi);
+  const P={all:'Depuis le début',month:'Ce mois',lastmonth:'Mois dernier',year:'Cette année',lastyear:'Année dernière'};
+  const n=new Date();const ms=[];
+  for(let i=11;i>=0;i--){const a=new Date(n.getFullYear(),n.getMonth()-i,1),b=new Date(n.getFullYear(),n.getMonth()-i+1,0,23,59,59);ms.push({l:a.toLocaleDateString('fr-FR',{month:'short'}).replace('.',''),v:totals(a,b).net})}
+  const byCat={};data.frais.forEach(f=>{const v=costInRange(f,lo||new Date(2000,0,1),hi||new Date(8.64e15));if(v)byCat[f.cat]=(byCat[f.cat]||0)+v});
+  const top=t.sold.map(c=>({c,k:calc(c)})).sort((a,b)=>b.k.profit-a.k.profit);
+  app.innerHTML=`<h2>Bilan</h2>
+  <select id="per" style="margin:0 0 12px">${Object.entries(P).map(([k,l])=>`<option value="${k}" ${period===k?'selected':''}>${l}</option>`).join('')}</select>
   <div class="kpis">
-    <div class="kpi big"><small>Bénéfice net</small><b class="${sgn(profit)}">${eur(profit)}</b></div>
-    <div class="kpi big"><small>ROI net</small><b class="${sgn(profit)}">${pct((cogs+fixed)>0?profit/(cogs+fixed):NaN)}</b></div>
-    <div class="kpi"><small>Ventes (${sold.length})</small><b>${eur(ca)}</b></div>
-    <div class="kpi"><small>Net encaissé (après frais)</small><b>${eur(net)}</b></div>
-    <div class="kpi"><small>Coût des objets vendus</small><b>${eur(cogs)}</b></div>
-    <div class="kpi"><small>Marge sur ventes</small><b class="${sgn(marge)}">${eur(marge)}</b></div>
-    <div class="kpi"><small>Frais fixes</small><b class="neg">${eur(-fixed)}</b></div>
-    <div class="kpi"><small>Achats + gradation</small><b>${eur(spent)}</b></div>
-    <div class="kpi"><small>Trésorerie (cash)</small><b class="${sgn(cash)}">${eur(cash)}</b></div>
+    <div class="kpi hero"><small>Bénéfice net</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>${t.net>=0?'Tu gagnes de l’argent':'Tu perds de l’argent'} · ROI ${pct(t.roi)}</small></div>
+    <div class="kpi"><small>Ventes (${t.sold.length} cartes)</small><b>${eur(t.ventes)}</b></div>
+    <div class="kpi"><small>Coût des cartes vendues</small><b>${eur(t.coutVendu)}</b></div>
+    <div class="kpi"><small>Marge sur les ventes</small><b class="${sgn(t.marge)}">${eur(t.marge)}</b></div>
+    <div class="kpi"><small>Frais annexes</small><b class="neg">−${eur(t.frais)}</b></div>
+    <div class="kpi"><small>Achats</small><b>${eur(t.achats)}</b></div>
+    <div class="kpi"><small>Gradation</small><b>${eur(t.grad)}</b></div>
+    <div class="kpi"><small>Trésorerie</small><b class="${sgn(t.cash)}">${eur(t.cash)}</b></div>
+    <div class="kpi"><small>Stock non vendu (coût)</small><b>${eur(t.stock)}</b></div>
   </div>
-  <p class="hint">Bénéfice net = marge sur les objets vendus dans la période − frais fixes de la période. Trésorerie = encaissé − tout ce qui a été dépensé (achats datés de la période, stock compris).</p>
-  <h3>Bénéfice net — 12 derniers mois</h3>
-  <div class="card">${chart(months)}</div>
-  <div class="row" style="align-items:flex-start">
-    <div><h3>Par type</h3><div class="card" style="padding:6px 10px">${Object.keys(byType).length?`<table><tr><th>Type</th><th class="n">Ventes</th><th class="n">Bénéf.</th><th class="n">ROI</th></tr>
-      ${Object.entries(byType).map(([k,t])=>`<tr><td>${TYPES[k]} <span class="mut">(${t.n})</span></td><td class="n">${eur(t.ca)}</td><td class="n ${sgn(t.p)}">${eur(t.p)}</td><td class="n">${pct(t.cost?t.p/t.cost:NaN)}</td></tr>`).join('')}</table>`:'<div class="empty">Pas de vente</div>'}</div></div>
-    <div><h3>Frais fixes</h3><div class="card" style="padding:6px 10px">${Object.keys(byCat).length?`<table>${Object.entries(byCat).map(([k,v])=>`<tr><td>${CATS[k]}</td><td class="n">${eur(v)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="n"><b>${eur(fixed)}</b></td></tr></table>`:'<div class="empty">Aucun frais</div>'}</div></div>
-  </div>
-  ${top.length?`<h3>Ventes de la période</h3><div class="card" style="padding:6px 10px"><table><tr><th>Objet</th><th class="n">Coût</th><th class="n">Net</th><th class="n">Bénéf.</th></tr>
-    ${top.slice(0,15).map(({it,c})=>`<tr data-act="edit" data-id="${it.id}" style="cursor:pointer"><td>${esc(it.name)}<br><small class="mut">${it.sellDate||''} · ${esc(it.sellPlatform||'')}</small></td><td class="n">${eur(c.cost)}</td><td class="n">${eur(c.net)}</td><td class="n ${sgn(c.profit)}">${eur(c.profit)}</td></tr>`).join('')}</table></div>`:''}`;
-  $('#pk').onchange=e=>{period.k=e.target.value;if(period.k==='custom'&&!period.from){period.from=new Date().getFullYear()+'-01-01';period.to=today()}renderStats()};
-  if($('#pf')){$('#pf').onchange=e=>{period.from=e.target.value;renderStats()};$('#pt').onchange=e=>{period.to=e.target.value;renderStats()}}
+  <p class="hint">Bénéfice net = prix de vente − (achat + gradation) des cartes vendues − bot, cookgroup, proxies… Trésorerie = ventes − tout ce que tu as dépensé, stock compris.</p>
+  <h3>Bénéfice net par mois</h3><div class="card">${chart(ms)}</div>
+  ${Object.keys(byCat).length?`<h3>Frais annexes</h3><div class="card" style="padding:4px 10px"><table>${Object.entries(byCat).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${eur(v)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="n"><b>${eur(t.frais)}</b></td></tr></table></div>`:''}
+  ${top.length?`<h3>Ventes</h3><div class="card" style="padding:4px 10px"><table><tr><th>Carte</th><th class="n">Coût</th><th class="n">Vente</th><th class="n">Bénéf.</th></tr>${top.map(({c,k})=>`<tr data-act="edit" data-id="${esc(c.id)}" style="cursor:pointer"><td>${esc(c.name)}<br><small class="mut">${esc(c.gradeCompany&&c.gradeCompany!=='Non gradée'?c.gradeCompany+' '+c.grade:'Raw')}</small></td><td class="n">${eur(k.cost)}</td><td class="n">${eur(num(c.sellPrice))}</td><td class="n ${sgn(k.profit)}">${eur(k.profit)}</td></tr>`).join('')}</table></div>`:''}
+  ${data.url?`<a class="btn big" style="text-align:center;margin-top:6px" href="${esc(data.url)}" target="_blank" rel="noopener">Ouvrir le Google Sheet</a>`:''}`;
+  $('#per').onchange=e=>{period=e.target.value;renderStats()};
 }
-function chart(ms){
-  const W=640,H=210,top=16,bot=180,padL=8,bw=(W-padL*2)/ms.length;
-  const mp=Math.max(0,...ms.map(m=>m.val)),mn=Math.max(0,...ms.map(m=>-m.val));
-  if(mp===0&&mn===0)return '<div class="empty">Pas encore de données</div>';
-  const sc=(bot-top)/(mp+mn),zero=top+mp*sc;
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Bénéfice net mensuel">
-    <line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#2c3140"/>
-    ${ms.map((m,i)=>{const h=Math.abs(m.val)*sc,x=padL+i*bw+bw*.18,w=bw*.64,y=m.val>=0?zero-h:zero;
-      return `<rect x="${x}" y="${y}" width="${w}" height="${Math.max(h,1)}" rx="3" fill="${m.val>=0?'#3ecf8e':'#ff6b6b'}"><title>${m.label} : ${eur(m.val)}</title></rect>
-      ${m.val?`<text x="${x+w/2}" y="${m.val>=0?y-4:y+h+11}" text-anchor="middle">${Math.round(m.val)}</text>`:''}
-      <text x="${x+w/2}" y="${H-6}" text-anchor="middle">${m.label}</text>`}).join('')}</svg>`;
-}
+function chart(ms){const W=640,H=210,top=16,bot=180,bw=(W-16)/ms.length;
+  const mp=Math.max(0,...ms.map(m=>m.v)),mn=Math.max(0,...ms.map(m=>-m.v));if(!mp&&!mn)return'<div class="empty">Pas encore de données</div>';
+  const sc=(bot-top)/(mp+mn),z=top+mp*sc;
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%"><line x1="0" x2="${W}" y1="${z}" y2="${z}" stroke="#2c3140"/>${ms.map((m,i)=>{const h=Math.abs(m.v)*sc,x=8+i*bw+bw*.18,w=bw*.64,y=m.v>=0?z-h:z;
+    return`<rect x="${x}" y="${y}" width="${w}" height="${Math.max(h,1)}" rx="3" fill="${m.v>=0?'#3ecf8e':'#ff6b6b'}"/>${m.v?`<text x="${x+w/2}" y="${m.v>=0?y-4:y+h+11}" text-anchor="middle">${Math.round(m.v)}</text>`:''}<text x="${x+w/2}" y="${H-6}" text-anchor="middle">${m.l}</text>`}).join('')}</svg>`}
 
-/* ================= Réglages ================= */
+/* ---------- Réglages ---------- */
 function renderSettings(){
-  app.innerHTML=`
-  <h2>Réglages</h2>
-  <div class="card">
-    <h3 style="margin-top:0">Gemini</h3>
+  app.innerHTML=`<h2>Réglages</h2>
+  <div class="card"><h3 style="margin-top:0">1 · Google Sheet</h3>
+    <label>URL de l'application Web (Apps Script)<input id="sheet" value="${esc(getSheet())}" placeholder="https://script.google.com/macros/s/…/exec"></label>
+    <div class="bar"><button class="btn pri" data-act="saveSheet">Enregistrer et tester</button><span class="hint" id="sMsg"></span></div>
+    ${data.url?`<p class="hint">Sheet connecté : <a href="${esc(data.url)}" target="_blank" rel="noopener">ouvrir</a></p>`:''}
+    <details style="margin-top:12px"><summary>Comment obtenir cette URL (une seule fois, plus simple sur ordinateur)</summary>
+      <ol>
+        <li>Ouvre ton Google Sheet <b>PokeTrade — Suivi des cartes</b>.</li>
+        <li>Menu <b>Extensions → Apps Script</b>.</li>
+        <li>Efface tout le code, colle le code ci-dessous (bouton <b>Copier le code</b>), puis 💾 <b>Enregistrer</b>.</li>
+        <li><b>Déployer → Nouveau déploiement</b> → roue ⚙ → <b>Application Web</b>.<br>Exécuter en tant que : <b>Moi</b> · Accès : <b>Tout le monde</b> → <b>Déployer</b>.</li>
+        <li>Google demande une autorisation : <b>Autoriser l'accès</b> → ton compte → <b>Paramètres avancés</b> → <b>Accéder à PokeTrade (non sécurisé)</b> → <b>Autoriser</b>. C'est ton propre script, c'est normal.</li>
+        <li>Copie l'<b>URL de l'application Web</b> (finit par <code>/exec</code>) et colle-la au-dessus.</li>
+      </ol>
+      <div class="bar" style="margin:8px 0"><button class="btn" data-act="copyCode">📋 Copier le code</button></div>
+      <textarea id="code" readonly>Chargement…</textarea>
+      <p class="hint">Ne partage pas cette URL : elle donne accès à ton Sheet.</p>
+    </details>
+  </div>
+  <div class="card"><h3 style="margin-top:0">2 · Gemini</h3>
     <label>Clé API Gemini<input id="key" type="password" value="${esc(getKey())}" placeholder="AIza…"></label>
-    <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Stockée uniquement dans ce navigateur.</p>
-    <label>Modèle<input id="model" value="${esc(S.settings.model||'gemini-3.8-flash')}" list="models"></label>
-    <datalist id="models"><option>gemini-3.8-flash</option></datalist>
-    <p class="hint">Si Google sort un modèle plus récent, colle simplement son nom ici.</p>
-    <div class="bar"><button class="btn pri" data-act="saveKey">Enregistrer</button><button class="btn" data-act="testKey">Tester la connexion</button><span class="hint" id="testMsg"></span></div>
-  </div>
-  <div class="card">
-    <h3 style="margin-top:0">Sauvegarde</h3>
-    <p class="hint" style="margin-bottom:10px">Les données restent dans ce navigateur. Exporte régulièrement — c'est aussi comme ça que tu passes du PC au téléphone.</p>
-    <div class="bar">
-      <button class="btn" data-act="export">⬇ Exporter (JSON)</button>
-      <button class="btn" data-act="import">⬆ Importer (JSON)</button>
-      <button class="btn" data-act="csv">⬇ Export CSV (Excel)</button>
-      <button class="btn dng" data-act="reset">Tout effacer</button>
-    </div>
-  </div>
-  <p class="hint">${S.items.length} objets · ${S.costs.length} frais fixes</p>`;
-}
-function exportCSV(){
-  const cols=['type','name','set','number','lang','rarity','condition','qty','status','buyDate','buyFrom','buyPrice','buyFees','gradeCompany','grade','gradeCost','gradeShip','estValue','sellDate','sellPlatform','sellPrice','sellFees','sellShip'];
-  const q=v=>{const s=String(v??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
-  const nf=v=>typeof v==='number'?String(v).replace('.',','):v;
-  const rows=[cols.concat(['cout_revient','net_vente','benefice']).join(';')];
-  S.items.forEach(it=>{const c=calc(it);rows.push(cols.map(k=>q(nf(it[k]))).concat([nf(+c.cost.toFixed(2)),c.sold?nf(+c.net.toFixed(2)):'',c.sold?nf(+c.profit.toFixed(2)):'']).join(';'))});
-  download('poketrade_'+today()+'.csv','﻿'+rows.join('\n'),'text/csv');
+    <label>Modèle<input id="model" value="${esc(getModel())}"></label>
+    <div class="bar"><button class="btn pri" data-act="saveKey">Enregistrer et tester</button><span class="hint" id="kMsg"></span></div>
+    <p class="hint">Clé gratuite : <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Gardée uniquement sur cet appareil.</p>
+  </div>`;
+  fetch('apps-script.gs').then(r=>r.ok?r.text():Promise.reject()).then(t=>$('#code')&&($('#code').value=t)).catch(()=>{$('#code')&&($('#code').value='Code disponible ici : https://github.com/florianbver-boop/poketrade/blob/main/apps-script.gs')});
 }
 
-/* ================= Événements ================= */
+/* ---------- Événements ---------- */
 document.addEventListener('click',async e=>{
-  const n=e.target.closest('#nav button');if(n){if(n.dataset.v==='add')go('add');else go(n.dataset.v);return}
-  const el=e.target.closest('[data-act]');if(!el)return;
-  const a=el.dataset.act;
+  const n=e.target.closest('#nav button');if(n){go(n.dataset.v);return}
+  const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
   if(a==='new')go('add');
   else if(a==='edit')go('add',el.dataset.id);
-  else if(a==='cancel')go('inv');
+  else if(a==='cancel')go('home');
+  else if(a==='goSettings')go('settings');
+  else if(a==='filter'){filter=el.dataset.k;renderHome()}
+  else if(a==='refresh'){syncInfo('⟳');try{await sheetGet();toast('✓ À jour')}catch(err){toast(err.message);syncInfo()}render()}
   else if(a==='pick')pick(+el.dataset.i);
-  else if(a==='split')splitItem();
-  else if(a==='del'){if(confirm('Supprimer cet objet ?')){S.items=S.items.filter(x=>x.id!==editId);save();go('inv')}}
-  else if(a==='preset'){const f=$('#cf');f.elements.cat.value=el.dataset.k;if(!f.elements.name.value)f.elements.name.placeholder=CATS[el.dataset.k]+' — nom';f.elements.name.focus()}
-  else if(a==='costEdit'){costEdit=el.dataset.id;renderCosts();window.scrollTo(0,0)}
+  else if(a==='del'){if(!confirm('Supprimer cette carte du Sheet ?'))return;try{await sheetPost('deleteCard',{id:editId});delete thumbs[editId];saveThumbs();toast('Supprimée');go('home')}catch(err){toast('Erreur : '+err.message)}}
+  else if(a==='cat'){$('#cf').elements.cat.value=el.dataset.k;document.querySelectorAll('[data-act=cat]').forEach(c=>c.classList.toggle('on',c===el));const nm=$('#cf').elements.name;if(!nm.value)nm.focus()}
+  else if(a==='costEdit'){costEdit=el.dataset.id;renderCosts();scrollTo(0,0)}
   else if(a==='costCancel'){costEdit=null;renderCosts()}
-  else if(a==='costDel'){if(confirm('Supprimer ce frais ?')){S.costs=S.costs.filter(x=>x.id!==costEdit);costEdit=null;save();renderCosts()}}
-  else if(a==='saveKey'){setKey($('#key').value.trim());S.settings.model=$('#model').value.trim()||'gemini-3.8-flash';save();toast('Réglages enregistrés ✓')}
-  else if(a==='testKey'){setKey($('#key').value.trim());S.settings.model=$('#model').value.trim()||'gemini-3.8-flash';save();
-    const m=$('#testMsg');m.textContent='Test…';try{await gemini([{text:'Réponds juste OK'}],false);m.innerHTML='<span class="pos">Connexion OK ✓</span>'}catch(err){m.innerHTML='<span class="neg">'+esc(err.message)+'</span>'}}
-  else if(a==='export')download('poketrade_sauvegarde_'+today()+'.json',JSON.stringify({v:1,items:S.items,costs:S.costs,settings:{model:S.settings.model}}),'application/json');
-  else if(a==='import')$('#importFile').click();
-  else if(a==='csv')exportCSV();
-  else if(a==='reset'){if(confirm('Effacer TOUTES les données ? (exporte avant)')){S.items=[];S.costs=[];save();render()}}
+  else if(a==='costDel'){if(!confirm('Supprimer ce frais ?'))return;try{await sheetPost('deleteCost',{id:costEdit});costEdit=null;renderCosts()}catch(err){toast('Erreur : '+err.message)}}
+  else if(a==='saveSheet'){LS.set('sheet_url',$('#sheet').value.trim());const m=$('#sMsg');m.textContent='Connexion…';
+    try{const j=await sheetGet();renderSettings();toast(`✓ Google Sheet connecté (${j.cartes.length} cartes)`)}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
+  else if(a==='saveKey'){LS.set('gemini_key',$('#key').value.trim());LS.set('model2',$('#model').value.trim()||DEFAULT_MODEL);const m=$('#kMsg');m.textContent='Test…';
+    try{await gemini([{text:'Réponds OK'}],false);m.innerHTML='<span class="pos">✓ Gemini OK</span>'}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
+  else if(a==='copyCode'){try{await navigator.clipboard.writeText($('#code').value);toast('Code copié ✓')}catch(err){$('#code').select();toast('Sélectionne et copie le texte')}}
 });
-$('#importFile').onchange=async e=>{
-  const file=e.target.files[0];if(!file)return;
-  try{const o=JSON.parse(await file.text());if(!Array.isArray(o.items))throw new Error('Fichier invalide');
-    if(!confirm(`Remplacer les données actuelles par ${o.items.length} objets et ${(o.costs||[]).length} frais ?`))return;
-    S.items=o.items;S.costs=o.costs||[];if(o.settings?.model)S.settings.model=o.settings.model;await save();toast('Import réussi ✓');render()}
-  catch(err){toast('Import impossible : '+err.message)}finally{e.target.value=''}
-};
 
-/* ================= Démarrage ================= */
+/* ---------- Démarrage ---------- */
 (async()=>{
-  try{await DB.open()}catch(e){DB.db=null}
-  try{const st=await DB.get('state');if(st)S={...S,...st,settings:{...S.settings,...(st.settings||{})}}}catch(e){}
-  if(/^gemini-(1|2)\./.test(S.settings.model||'')){S.settings.model='gemini-3.8-flash';save()}
-  render();
+  const old=LS.get('model','');if(old&&!LS.get('model2'))LS.set('model2',/^gemini-(1|2)\./.test(old)?DEFAULT_MODEL:old);
+  await IDB.open();thumbs=(await IDB.get('thumbs'))||{};
+  syncInfo();render();
+  if(getSheet()){try{await sheetGet();render()}catch(e){syncInfo('⚠ Hors ligne')}}
 })();
 </script>
 </body>
