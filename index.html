@@ -80,7 +80,7 @@ svg text{fill:var(--mut);font-size:10px}
 </style>
 </head>
 <body>
-<header><h1>Poke<span>Trade</span></h1><span id="sync"></span></header>
+<header><h1>Poke<span>Trade</span> <small id="ver" style="font-size:11px;color:var(--mut);font-weight:500"></small></h1><span id="sync"></span></header>
 <main id="app"></main>
 <nav id="nav">
   <button data-v="home"><b>▤</b>Cartes</button>
@@ -92,6 +92,10 @@ svg text{fill:var(--mut);font-size:10px}
 <div class="toast" id="toast"></div>
 
 <script>
+/* ---------- Version ---------- */
+const APP_VERSION='2.4';
+const APP_URL='https://florianbver-boop.github.io/poketrade/';
+
 /* ---------- Réglages locaux ---------- */
 const LS={get(k,d=''){try{return localStorage.getItem('pt_'+k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem('pt_'+k,v)}catch(e){}}};
 const DEFAULT_MODEL='gemini-3.8-flash';
@@ -452,6 +456,11 @@ function renderSettings(){
     <label>Modèle<input id="model" value="${esc(getModel())}"></label>
     <div class="bar"><button class="btn pri" data-act="saveKey">Enregistrer et tester</button><span class="hint" id="kMsg"></span></div>
     <p class="hint">Clé gratuite : <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Gardée uniquement sur cet appareil.</p>
+  </div>
+  <div class="card"><h3 style="margin-top:0">Version</h3>
+    <p style="margin:0">PokeTrade <b>v${APP_VERSION}</b></p>
+    <p class="hint">Adresse de l'app : <a href="${APP_URL}">${APP_URL.replace('https://','')}</a></p>
+    <div class="bar" style="margin-top:10px"><button class="btn" data-act="copyUrl">📋 Copier l'adresse</button><button class="btn" data-act="reload">⟳ Recharger la dernière version</button></div>
   </div>`;
   fetch('apps-script.gs').then(r=>r.ok?r.text():Promise.reject()).then(t=>$('#code')&&($('#code').value=t)).catch(()=>{$('#code')&&($('#code').value='Code disponible ici : https://github.com/florianbver-boop/poketrade/blob/main/apps-script.gs')});
 }
@@ -476,6 +485,8 @@ document.addEventListener('click',async e=>{
     try{const j=await sheetGet();renderSettings();toast(`✓ Google Sheet connecté (${j.cartes.length} cartes)`)}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
   else if(a==='saveKey'){LS.set('gemini_key',$('#key').value.trim());LS.set('model2',$('#model').value.trim()||DEFAULT_MODEL);const m=$('#kMsg');m.textContent='Test…';
     try{await gemini([{text:'Réponds OK'}],false);m.innerHTML='<span class="pos">✓ Gemini OK</span>'}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
+  else if(a==='copyUrl'){try{await navigator.clipboard.writeText(APP_URL);toast('Adresse copiée ✓')}catch(err){toast(APP_URL)}}
+  else if(a==='reload'){location.replace(APP_URL+'?v='+Date.now())}
   else if(a==='copyCode'){try{await navigator.clipboard.writeText($('#code').value);toast('Code copié ✓')}catch(err){$('#code').select();toast('Sélectionne et copie le texte')}}
 });
 
@@ -483,7 +494,7 @@ document.addEventListener('click',async e=>{
 (async()=>{
   const old=LS.get('model','');if(old&&!LS.get('model2'))LS.set('model2',/^gemini-(1|2)\./.test(old)?DEFAULT_MODEL:old);
   await IDB.open();thumbs=(await IDB.get('thumbs'))||{};
-  syncInfo();render();
+  $('#ver').textContent='v'+APP_VERSION;syncInfo();render();
   if(getSheet()){try{await sheetGet();render()}catch(e){syncInfo('⚠ Hors ligne')}}
 })();
 </script>
