@@ -133,7 +133,7 @@ function setData(j){data={cartes:j.cartes||[],frais:j.frais||[],url:j.url||data.
 function syncInfo(s){$('#sync').textContent=s||(getSheet()?'✓ Google Sheet':'⚠ Sheet non connecté')}
 async function sheetGet(){
   const u=getSheet();if(!u)throw new Error('Google Sheet non connecté (Réglages)');
-  const r=await fetch(u,{redirect:'follow'});const j=await r.json().catch(()=>{throw new Error('Réponse illisible : vérifie l’URL et l’accès « Tout le monde »')});
+  const r=await fetch(u,{redirect:'follow'}).catch(()=>{throw new Error('Impossible de joindre le Google Sheet (réseau ou URL).')});const j=await r.json().catch(()=>{throw new Error('Réponse illisible : vérifie l’URL et l’accès « Tout le monde »')});
   if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);return j;
 }
 async function sheetPost(action,payload){
@@ -173,10 +173,13 @@ const SCHEMA={type:'OBJECT',properties:{objets:{type:'ARRAY',items:{type:'OBJECT
 },required:['type','nom','societe']}}},required:['objets']};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let gemStatus=()=>{};
+const netErr=()=>{const e=new Error(location.hostname.endsWith('github.io')
+  ?'Impossible de joindre Gemini (réseau). Vérifie ta connexion, coupe un éventuel VPN / bloqueur de contenu, puis réessaie.'
+  :'Cette page ne peut pas appeler Gemini. Ouvre l’app ici : florianbver-boop.github.io/poketrade');e.status=0;return e};
 async function callModel(model,parts,json){
   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':getKey()},
-     body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.1}:{}})});
+     body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.1}:{}})}).catch(()=>{throw netErr()});
   const j=await r.json().catch(()=>({}));
   if(!r.ok){const e=new Error(j.error?.message||('HTTP '+r.status));e.status=r.status;e.code=j.error?.status||'';throw e}
   const txt=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
