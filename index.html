@@ -171,13 +171,52 @@ const SCHEMA={type:'OBJECT',properties:{objets:{type:'ARRAY',items:{type:'OBJECT
   type:{type:'STRING',enum:TYPES},nom:{type:'STRING'},numero:{type:'STRING'},serie:{type:'STRING'},langue:{type:'STRING'},
   societe:{type:'STRING',enum:COMPANIES},note:{type:'STRING'},confiance:{type:'STRING',enum:['haute','moyenne','basse']}
 },required:['type','nom','societe']}}},required:['objets']};
-async function gemini(parts,json=true){
-  const key=getKey();if(!key)throw new Error('Ajoute ta clé Gemini dans Réglages');
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getModel())}:generateContent`,
-    {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let gemStatus=()=>{};
+async function callModel(model,parts,json){
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':getKey()},
      body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.1}:{}})});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error?.message||('HTTP '+r.status));
-  return(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(j.error?.message||('HTTP '+r.status));e.status=r.status;e.code=j.error?.status||'';throw e}
+  const txt=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+  if(!txt){const e=new Error('Réponse vide');e.status=503;throw e}
+  return txt;
+}
+const busyErr=e=>[429,500,502,503,504].includes(e.status)||/UNAVAILABLE|RESOURCE_EXHAUSTED|overload|high demand|try again/i.test(e.code+' '+e.message);
+const goneErr=e=>e.status===404||/no longer available|not found|not supported/i.test(e.message);
+/* Liste des modèles Gemini de ton compte qui savent lire une image (mise en cache 1 jour). */
+async function fallbackModels(main){
+  let list=null;
+  try{const c=JSON.parse(LS.get('models_cache','null'));if(c&&Date.now()-c.t<864e5)list=c.m}catch(e){}
+  if(!list){
+    try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':getKey()}});
+      const j=await r.json();
+      list=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent'))
+        .map(m=>m.name.replace('models/',''))
+        .filter(n=>/^gemini-/.test(n)&&/flash|pro/.test(n)&&!/image|tts|audio|live|embed|vision-preview|thinking-exp|computer|robotics/.test(n));
+      const ver=n=>parseFloat((n.match(/gemini-(\d+(\.\d+)?)/)||[])[1]||0);
+      const rank=n=>(/-lite/.test(n)?1:0)+(/pro/.test(n)?2:0)+(/preview|exp/.test(n)?0.5:0)+(/-\d{3,}$/.test(n)?0.3:0);
+      list.sort((a,b)=>ver(b)-ver(a)||rank(a)-rank(b));
+      LS.set('models_cache',JSON.stringify({t:Date.now(),m:list}));
+    }catch(e){list=[]}
+  }
+  return list.filter(n=>n!==main).slice(0,4);
+}
+async function gemini(parts,json=true){
+  if(!getKey())throw new Error('Ajoute ta clé Gemini dans Réglages');
+  const main=getModel();let last;
+  for(let a=0;a<3;a++){
+    try{return await callModel(main,parts,json)}
+    catch(e){last=e;if(goneErr(e))break;if(!busyErr(e))throw e;
+      if(a<2){gemStatus(`Gemini surchargé, nouvel essai (${a+2}/3)…`);await sleep(1500*(a+1))}}
+  }
+  for(const m of await fallbackModels(main)){
+    gemStatus(`Essai avec ${m}…`);
+    try{const t=await callModel(m,parts,json);gemStatus(`✓ Lu avec ${m}`);return t}
+    catch(e){last=e;if(!busyErr(e)&&!goneErr(e)&&e.status!==400)throw e}
+  }
+  throw new Error((last&&busyErr(last))?'Gemini est saturé en ce moment. Réessaie dans quelques minutes (ou remplis la fiche à la main).':(last?last.message:'Erreur'));
 }
 function normGrade(g){g=String(g||'').trim();if(!g)return'';const l=g.toLowerCase();
   if(l.includes('black'))return'10 Black Label';if(l.includes('gold')||l.includes('pristine'))return'10 Gold Label';
@@ -294,7 +333,7 @@ async function onPhoto(e){
   catch(err){toast(err.message)}
 }
 async function analyze(){
-  const m=$('#aMsg');m.textContent='✨ Gemini lit la carte…';
+  const m=$('#aMsg');m.textContent='✨ Gemini lit la carte…';gemStatus=s=>{const el=$('#aMsg');if(el)el.textContent=s};
   try{const txt=await gemini([{text:PROMPT},{inline_data:{mime_type:'image/jpeg',data:draft.big.split(',')[1]}}]);
     let o;try{o=JSON.parse(txt)}catch(e){throw new Error('réponse illisible')}
     draft.results=o.objets||[];const keep=read();renderForm();fill(keep);
