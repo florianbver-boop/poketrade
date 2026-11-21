@@ -42,23 +42,8 @@ function setup() {
   }
   if (!ss.getSheetByName('Bilan')) {
     const b = ss.insertSheet('Bilan', 0);
-    const rows = [
-      ['Bilan PokeTrade', ''],
-      ['', ''],
-      ['Cartes achetées', '=COUNTA(Cartes!A2:A)'],
-      ['Cartes vendues', '=COUNT(Cartes!L2:L)'],
-      ['Total achats', '=SUM(Cartes!J2:J)'],
-      ['Total gradation', '=SUM(Cartes!K2:K)'],
-      ['Total ventes', '=SUM(Cartes!L2:L)'],
-      ['Coût des cartes vendues (achat + gradation)', '=SUMIFS(Cartes!J2:J,Cartes!L2:L,"<>")+SUMIFS(Cartes!K2:K,Cartes!L2:L,"<>")'],
-      ['Marge sur les ventes', '=B7-B8'],
-      ['Frais annexes (bot, cookgroup, proxies…)', '=SUM(Frais!H2:H)'],
-      ['BÉNÉFICE NET', '=B9-B10'],
-      ['ROI net', '=IFERROR(B11/(B8+B10),0)'],
-      ['Stock non vendu (coût)', '=B5+B6-B8'],
-      ['Trésorerie (ventes − toutes les dépenses)', '=B7-B5-B6-B10']
-    ];
-    b.getRange(1, 1, rows.length, 2).setValues(rows);
+    b.getRange(1, 1, BILAN.length, 1).setValues(BILAN.map(r => [r[0]]));
+    bilanFormulas_(b);
     b.getRange('A1').setFontSize(16).setFontWeight('bold');
     b.getRange('B5:B11').setNumberFormat(PROFIT);
     b.getRange('B13:B14').setNumberFormat(PROFIT);
@@ -66,6 +51,57 @@ function setup() {
     b.getRange('A11:B11').setFontWeight('bold').setFontSize(13).setBackground('#fff4c2');
     b.setColumnWidth(1, 330);
     b.setColumnWidth(2, 140);
+  }
+  repair_();
+}
+
+const BILAN = [
+  ['Bilan PokeTrade', ''],
+  ['', ''],
+  ['Cartes achetées', '=COUNTA(Cartes!A2:A)'],
+  ['Cartes vendues', '=COUNT(Cartes!L2:L)'],
+  ['Total achats', '=SUM(Cartes!J2:J)'],
+  ['Total gradation', '=SUM(Cartes!K2:K)'],
+  ['Total ventes', '=SUM(Cartes!L2:L)'],
+  ['Coût des cartes vendues (achat + gradation)', '=SUMIFS(Cartes!J2:J,Cartes!L2:L,"<>")+SUMIFS(Cartes!K2:K,Cartes!L2:L,"<>")'],
+  ['Marge sur les ventes', '=B7-B8'],
+  ['Frais annexes (bot, cookgroup, proxies…)', '=SUM(Frais!H2:H)'],
+  ['BÉNÉFICE NET', '=B9-B10'],
+  ['ROI net', '=IFERROR(B11/(B8+B10),0)'],
+  ['Stock non vendu (coût)', '=B5+B6-B8'],
+  ['Trésorerie (ventes − toutes les dépenses)', '=B7-B5-B6-B10']
+];
+
+/* Séparateur des formules : "," ou ";" selon la langue du Sheet (détecté une fois). */
+function sep_() {
+  const props = PropertiesService.getScriptProperties();
+  let s = props.getProperty('SEP');
+  if (s) return s;
+  const c = ss_().getSheetByName('Bilan').getRange('D1');
+  c.setFormula('=IF(1=1,1,0)');
+  SpreadsheetApp.flush();
+  s = c.getDisplayValue() === '1' ? ',' : ';';
+  c.clearContent();
+  props.setProperty('SEP', s);
+  return s;
+}
+function F_(range, f) { range.setFormula(sep_() === ',' ? f : f.replace(/,/g, ';')); }
+
+function bilanFormulas_(b) {
+  BILAN.forEach((r, i) => { if (r[1]) F_(b.getRange(i + 1, 2), r[1]); });
+}
+
+/* Répare les formules si elles affichent une erreur (ex. ancienne version du script). */
+function repair_() {
+  const ss = ss_();
+  const b = ss.getSheetByName('Bilan');
+  if (b && /ERROR|ERREUR/i.test(b.getRange('B8').getDisplayValue())) {
+    PropertiesService.getScriptProperties().deleteProperty('SEP');
+    bilanFormulas_(b);
+    const c = ss.getSheetByName('Cartes');
+    for (let r = 2; r <= c.getLastRow(); r++) rowFormulas_('Cartes', c, r);
+    const f = ss.getSheetByName('Frais');
+    for (let r = 2; r <= f.getLastRow(); r++) rowFormulas_('Frais', f, r);
   }
 }
 
@@ -109,14 +145,16 @@ function upsert_(name, keys, data) {
   let r = rowOf_(sh, data.id);
   if (r < 0) r = sh.getLastRow() + 1;
   sh.getRange(r, 1, 1, keys.length).setValues([keys.map(k => cell_(k, data[k]))]);
+  rowFormulas_(name, sh, r);
+}
+
+function rowFormulas_(name, sh, r) {
   if (name === 'Cartes') {
-    sh.getRange(r, 14, 1, 2).setFormulas([[
-      '=IF(L' + r + '="","",L' + r + '-J' + r + '-K' + r + ')',
-      '=IF(L' + r + '="","En stock","Vendue")'
-    ]]);
+    F_(sh.getRange(r, 14), '=IF(L' + r + '="","",L' + r + '-J' + r + '-K' + r + ')');
+    F_(sh.getRange(r, 15), '=IF(L' + r + '="","En stock","Vendue")');
   } else {
     const fin = 'IF(G' + r + '="",TODAY(),MIN(G' + r + ',TODAY()))';
-    sh.getRange(r, 8).setFormula('=IFERROR(IF(E' + r + '="Ponctuel",D' + r + ',(IF(E' + r + '="Annuel",DATEDIF(F' + r + ',' + fin + ',"Y"),DATEDIF(F' + r + ',' + fin + ',"M"))+1)*D' + r + '),0)');
+    F_(sh.getRange(r, 8), '=IFERROR(IF(E' + r + '="Ponctuel",D' + r + ',(IF(E' + r + '="Annuel",DATEDIF(F' + r + ',' + fin + ',"Y"),DATEDIF(F' + r + ',' + fin + ',"M"))+1)*D' + r + '),0)');
   }
 }
 
