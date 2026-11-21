@@ -93,7 +93,7 @@ svg text{fill:var(--mut);font-size:10px}
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='2.4';
+const APP_VERSION='2.5';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -122,7 +122,7 @@ const sgn=n=>n>0.004?'pos':n<-0.004?'neg':'mut';
 const pct=n=>isFinite(n)?(n*100).toFixed(1).replace('.',',')+' %':'—';
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const D=s=>{if(!s)return null;const d=new Date(String(s).slice(0,10)+'T00:00:00');return isNaN(d)?null:d};
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2800)}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),m.length>80?9000:2800)}
 
 const COMPANIES=['Non gradée','PSA','CGC','PCA','Collect Aura','BGS','SGC','Autre'];
 const GRADES=['10 Black Label','10 Gold Label','10','9.5','9','8.5','8','7.5','7','6.5','6','5.5','5','4.5','4','3.5','3','2.5','2','1.5','1'];
@@ -135,16 +135,18 @@ let data={cartes:[],frais:[],url:''};
 try{const c=JSON.parse(LS.get('cache','null'));if(c)data=c}catch(e){}
 function setData(j){data={cartes:j.cartes||[],frais:j.frais||[],url:j.url||data.url};LS.set('cache',JSON.stringify(data));LS.set('synced',new Date().toISOString());syncInfo()}
 function syncInfo(s){$('#sync').textContent=s||(getSheet()?'✓ Google Sheet':'⚠ Sheet non connecté')}
+const SHEET_HTML_ERR='Le script Google a répondu par une page web au lieu des données. Dans Apps Script : Déployer → Gérer les déploiements → ✏️ → Version : Nouvelle version, Accès : « Tout le monde » → Déployer.';
+async function readSheet(r){const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error(SHEET_HTML_ERR)}}
 async function sheetGet(){
   const u=getSheet();if(!u)throw new Error('Google Sheet non connecté (Réglages)');
-  const r=await fetch(u,{redirect:'follow'}).catch(()=>{throw new Error('Impossible de joindre le Google Sheet (réseau ou URL).')});const j=await r.json().catch(()=>{throw new Error('Réponse illisible : vérifie l’URL et l’accès « Tout le monde »')});
+  const r=await fetch(u,{redirect:'follow'}).catch(()=>{throw new Error('Impossible de joindre le Google Sheet (réseau ou URL).')});const j=await readSheet(r);
   if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);return j;
 }
 async function sheetPost(action,payload){
   const u=getSheet();if(!u)throw new Error('Connecte d’abord ton Google Sheet dans Réglages');
   syncInfo('⟳ Enregistrement…');
-  try{const r=await fetch(u,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})});
-    const j=await r.json();if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);}
+  try{const r=await fetch(u,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})}).catch(()=>{throw new Error('Impossible de joindre le Google Sheet (réseau).')});
+    const j=await readSheet(r);if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);}
   catch(e){syncInfo();throw e}
 }
 
