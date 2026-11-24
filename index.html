@@ -93,7 +93,7 @@ svg text{fill:var(--mut);font-size:10px}
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='2.8';
+const APP_VERSION='2.9';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -560,6 +560,7 @@ function renderSettings(){
     <label>URL de l'application Web (Apps Script)<input id="sheet" value="${esc(getSheet())}" placeholder="https://script.google.com/macros/s/…/exec"></label>
     <div class="bar"><button class="btn pri" data-act="saveSheet">Enregistrer et tester</button><span class="hint" id="sMsg"></span></div>
     ${data.url?`<p class="hint">Sheet connecté : <a href="${esc(data.url)}" target="_blank" rel="noopener">ouvrir</a></p>`:''}
+    ${getSheet()?`<div class="calc" style="margin-top:10px"><span>Adresse utilisée</span><span class="mut" style="font-size:12px">…${esc(getSheet().slice(-12))}</span><span>Script qui répond</span><b class="${data.v?'pos':'neg'}">${data.v?'Nouveau (v'+data.v+') ✓':'Ancien ✗'}</b><span>Cartes / items lus</span><span>${data.cartes.length} / ${data.items.filter(i=>!PENDING().some(p=>p.id===i.id)).length}</span><span>Items en attente sur ce téléphone</span><b class="${PENDING().length?'neg':'mut'}">${PENDING().length}</b></div>`:''}
     <details style="margin-top:12px"><summary>Comment obtenir cette URL (une seule fois, plus simple sur ordinateur)</summary>
       <ol>
         <li>Ouvre ton Google Sheet <b>PokeTrade — Suivi des cartes</b>.</li>
@@ -610,7 +611,7 @@ document.addEventListener('click',async e=>{
   else if(a==='costCancel'){costEdit=null;renderCosts()}
   else if(a==='costDel'){if(!confirm('Supprimer ce frais ?'))return;try{await sheetPost('deleteCost',{id:costEdit});costEdit=null;renderCosts()}catch(err){toast('Erreur : '+err.message)}}
   else if(a==='saveSheet'){LS.set('sheet_url',$('#sheet').value.trim());const m=$('#sMsg');m.textContent='Connexion…';
-    try{const j=await sheetGet();renderSettings();toast(`✓ Google Sheet connecté (${j.cartes.length} cartes)`)}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
+    try{const j=await sheetGet();renderSettings();toast(j.v?`✓ Connecté · nouveau script (v${j.v}) · ${j.cartes.length} cartes · ${(j.items||[]).length} items`:`⚠ Connecté, mais c'est l'ANCIEN script qui répond : les items ne peuvent pas être enregistrés.`)}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
   else if(a==='saveKey'){LS.set('gemini_key',$('#key').value.trim());LS.set('model2',$('#model').value.trim()||DEFAULT_MODEL);const m=$('#kMsg');m.textContent='Test…';
     try{await gemini([{text:'Réponds OK'}],false);m.innerHTML='<span class="pos">✓ Gemini OK</span>'}catch(err){m.innerHTML=`<span class="neg">${esc(err.message)}</span>`}}
   else if(a==='copyUrl'){try{await navigator.clipboard.writeText(APP_URL);toast('Adresse copiée ✓')}catch(err){toast(APP_URL)}}
