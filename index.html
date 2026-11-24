@@ -93,7 +93,7 @@ svg text{fill:var(--mut);font-size:10px}
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='2.7';
+const APP_VERSION='2.8';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -622,6 +622,11 @@ document.addEventListener('click',async e=>{
 (async()=>{
   const old=LS.get('model','');if(old&&!LS.get('model2'))LS.set('model2',/^gemini-(1|2)\./.test(old)?DEFAULT_MODEL:old);
   await IDB.open();thumbs=(await IDB.get('thumbs'))||{};
+  /* Lien de configuration : …/poketrade/#sheet=URL_EXEC (le # n'est jamais envoyé à un serveur) */
+  const mh=location.hash.match(/^#sheet=(.+)$/);
+  if(mh){const u=decodeURIComponent(mh[1]).trim();
+    if(/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u)){LS.set('sheet_url',u);setTimeout(()=>toast('✓ Adresse du Google Sheet enregistrée'),300)}
+    history.replaceState(null,'',location.pathname)}
   $('#ver').textContent='v'+APP_VERSION;syncInfo();render();
   if(getSheet()){try{await sheetGet();render()}catch(e){syncInfo('⚠ Hors ligne')}}
 })();
