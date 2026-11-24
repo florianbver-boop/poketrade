@@ -80,20 +80,20 @@ svg text{fill:var(--mut);font-size:10px}
 </style>
 </head>
 <body>
-<header><h1>Poke<span>Trade</span> <small id="ver" style="font-size:11px;color:var(--mut);font-weight:500"></small></h1><span id="sync"></span></header>
+<header><h1>Poke<span>Trade</span> <small id="ver" style="font-size:11px;color:var(--mut);font-weight:500"></small></h1><span id="sync"></span><button id="setBtn" data-act="goSettings" style="background:none;border:0;color:var(--mut);font-size:20px;padding:0 0 0 8px;cursor:pointer" aria-label="Réglages">⚙︎</button></header>
 <main id="app"></main>
 <nav id="nav">
-  <button data-v="home"><b>▤</b>Cartes</button>
-  <button data-v="costs"><b>⚙</b>Frais</button>
-  <button data-v="add" class="add"><b>＋</b>Ajouter</button>
+  <button data-v="home"><b>🃏</b>Cartes</button>
+  <button data-v="items"><b>📦</b>Items</button>
+  <button data-v="choose" class="add"><b>＋</b>Ajouter</button>
+  <button data-v="costs"><b>€</b>Frais</button>
   <button data-v="stats"><b>◔</b>Bilan</button>
-  <button data-v="settings"><b>☰</b>Réglages</button>
 </nav>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='2.5';
+const APP_VERSION='2.6';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -124,16 +124,17 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const D=s=>{if(!s)return null;const d=new Date(String(s).slice(0,10)+'T00:00:00');return isNaN(d)?null:d};
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),m.length>80?9000:2800)}
 
-const COMPANIES=['Non gradée','PSA','CGC','PCA','Collect Aura','BGS','SGC','Autre'];
+const COMPANIES=['Non gradée','PSA','CGC','PCA','Collect Aura','BGS','SGC','TAG','ACE','AGS','EGS','MNT'];
+const ITEM_CATS=['ETB','UPC','Display','Coffret','Tripack','Bundle','Booster','Blister','Mini-tin','Pokébox','Accessoire','Autre'];
 const GRADES=['10 Black Label','10 Gold Label','10','9.5','9','8.5','8','7.5','7','6.5','6','5.5','5','4.5','4','3.5','3','2.5','2','1.5','1'];
 const TYPES=['Carte','Scellé','Autre'];
 const CATS=['Bot','Cookgroup','Proxies','Autre'];
 const FREQS=['Mensuel','Annuel','Ponctuel'];
 
 /* ---------- Données (Google Sheet) ---------- */
-let data={cartes:[],frais:[],url:''};
-try{const c=JSON.parse(LS.get('cache','null'));if(c)data=c}catch(e){}
-function setData(j){data={cartes:j.cartes||[],frais:j.frais||[],url:j.url||data.url};LS.set('cache',JSON.stringify(data));LS.set('synced',new Date().toISOString());syncInfo()}
+let data={cartes:[],items:[],frais:[],url:''};
+try{const c=JSON.parse(LS.get('cache','null'));if(c)data={...data,...c,items:c.items||[]}}catch(e){}
+function setData(j){data={cartes:j.cartes||[],items:j.items||[],frais:j.frais||[],url:j.url||data.url};LS.set('cache',JSON.stringify(data));LS.set('synced',new Date().toISOString());syncInfo()}
 function syncInfo(s){$('#sync').textContent=s||(getSheet()?'✓ Google Sheet':'⚠ Sheet non connecté')}
 const SHEET_HTML_ERR='Le script Google a répondu par une page web au lieu des données. Dans Apps Script : Déployer → Gérer les déploiements → ✏️ → Version : Nouvelle version, Accès : « Tout le monde » → Déployer.';
 async function readSheet(r){const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error(SHEET_HTML_ERR)}}
@@ -170,22 +171,33 @@ Pour chaque carte, lis précisément :
 - numero : numéro imprimé en bas de la carte ou sur l'étiquette du boîtier (ex. "199/165", "TG05/TG30", "SVP 056")
 - serie : nom de l'extension/série (ex. "Écarlate et Violet 151", "Évolutions Prismatiques"), dans la langue de la carte
 - langue : FR, EN, JP, etc.
-- societe : si la carte est dans un boîtier gradé, la société lue sur l'étiquette (PSA, CGC, PCA, Collect Aura, BGS, SGC), sinon "Non gradée"
+- societe : si la carte est dans un boîtier gradé, le nom de la société tel qu'écrit sur l'étiquette (ex. PSA, CGC, PCA, Collect Aura, BGS, SGC, TAG, ACE…), sinon "Non gradée"
 - note : la note lue sur l'étiquette. Note de 1 à 10 (demi-points possibles). Distingue bien : "10" (étiquette classique/blanche), "10 Gold Label" (étiquette dorée, ex. CGC Pristine 10), "10 Black Label" (étiquette noire, ex. BGS Black Label ou CGC Perfect 10). Vide si non gradée.
 Utilise les informations écrites sur l'étiquette du boîtier en priorité. N'invente rien : chaîne vide si illisible, et confiance "basse".`;
 const SCHEMA={type:'OBJECT',properties:{objets:{type:'ARRAY',items:{type:'OBJECT',properties:{
-  type:{type:'STRING',enum:TYPES},nom:{type:'STRING'},numero:{type:'STRING'},serie:{type:'STRING'},langue:{type:'STRING'},
-  societe:{type:'STRING',enum:COMPANIES},note:{type:'STRING'},confiance:{type:'STRING',enum:['haute','moyenne','basse']}
-},required:['type','nom','societe']}}},required:['objets']};
+  nom:{type:'STRING'},numero:{type:'STRING'},serie:{type:'STRING'},langue:{type:'STRING'},
+  societe:{type:'STRING'},note:{type:'STRING'},confiance:{type:'STRING',enum:['haute','moyenne','basse']}
+},required:['nom','societe']}}},required:['objets']};
+const PROMPT_ITEM=`Tu es expert en produits scellés Pokémon (JCC) : ETB (Coffret Dresseur d'Élite), UPC (Ultra Premium Collection), Display, Coffret, Tripack, Bundle, Booster, Blister, Mini-tin, Pokébox, accessoires…
+Identifie chaque produit visible sur la photo (une entrée par produit différent ; si le même produit apparaît plusieurs fois, une seule entrée avec la quantité).
+- nom : nom commercial du produit (ex. "ETB Évolutions Prismatiques", "UPC Dracaufeu", "Coffret Collection Premium Mew ex")
+- categorie : une de ${ITEM_CATS.join(', ')}
+- serie : extension/série (ex. "Évolutions Prismatiques", "151")
+- langue : FR, EN, JP, etc.
+- quantite : nombre d'exemplaires visibles de ce produit
+N'invente rien : chaîne vide si illisible, et confiance "basse".`;
+const SCHEMA_ITEM={type:'OBJECT',properties:{objets:{type:'ARRAY',items:{type:'OBJECT',properties:{
+  nom:{type:'STRING'},categorie:{type:'STRING',enum:ITEM_CATS},serie:{type:'STRING'},langue:{type:'STRING'},quantite:{type:'INTEGER'},confiance:{type:'STRING',enum:['haute','moyenne','basse']}
+},required:['nom','categorie']}}},required:['objets']};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let gemStatus=()=>{};
 const netErr=()=>{const e=new Error(location.hostname.endsWith('github.io')
   ?'Impossible de joindre Gemini (réseau). Vérifie ta connexion, coupe un éventuel VPN / bloqueur de contenu, puis réessaie.'
   :'Cette page ne peut pas appeler Gemini. Ouvre l’app ici : florianbver-boop.github.io/poketrade');e.status=0;return e};
-async function callModel(model,parts,json){
+async function callModel(model,parts,schema){
   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':getKey()},
-     body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:'application/json',responseSchema:SCHEMA,temperature:0.1}:{}})}).catch(()=>{throw netErr()});
+     body:JSON.stringify({contents:[{parts}],generationConfig:schema?{responseMimeType:'application/json',responseSchema:schema,temperature:0.1}:{}})}).catch(()=>{throw netErr()});
   const j=await r.json().catch(()=>({}));
   if(!r.ok){const e=new Error(j.error?.message||('HTTP '+r.status));e.status=r.status;e.code=j.error?.status||'';throw e}
   const txt=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
@@ -212,7 +224,7 @@ async function fallbackModels(main){
   }
   return list.filter(n=>n!==main).slice(0,4);
 }
-async function gemini(parts,json=true){
+async function gemini(parts,json=SCHEMA){
   if(!getKey())throw new Error('Ajoute ta clé Gemini dans Réglages');
   const main=getModel();let last;
   for(let a=0;a<3;a++){
@@ -236,37 +248,53 @@ function loadImage(f){return new Promise((res,rej)=>{const i=new Image();i.onloa
 function resize(img,max,q){const s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
 
 /* ---------- Navigation ---------- */
-let view='home',editId=null,draft=null,costEdit=null,period='all',filter='all',busy=false;
+let view='home',editId=null,draft=null,costEdit=null,period='all',filter='all',ifilter='all',busy=false;
 const app=$('#app');
-function go(v,id=null){view=v;if(v==='add'){editId=id;draft={thumb:null,big:null,results:[],picked:-1}}render();scrollTo(0,0)}
+const newDraft=()=>({thumb:null,big:null,results:[],picked:-1});
+function go(v,id=null){view=v;if(v==='add'||v==='additem'){editId=id;draft=newDraft()}render();scrollTo(0,0)}
 function render(){
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
-  ({home:renderHome,add:renderForm,costs:renderCosts,stats:renderStats,settings:renderSettings})[view]();
+  const tab={add:'home',additem:'items',settings:''}[view]??view;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
+  ({home:renderHome,items:renderItems,choose:renderChoose,add:renderForm,additem:renderItemForm,costs:renderCosts,stats:renderStats,settings:renderSettings})[view]();
 }
 const noSheet=()=>getSheet()?'':`<div class="warn"><b>Connecte ton Google Sheet</b><br><span class="mut" style="font-size:13px">Sans ça, rien n'est enregistré.</span><br><br><button class="btn pri" data-act="goSettings">Configurer (5 min, une seule fois)</button></div>`;
 function gradeBadge(c){if(!c.gradeCompany||c.gradeCompany==='Non gradée'||!c.grade)return'<span class="gr raw">Raw</span>';
   const cls=c.grade==='10 Gold Label'?'gold':c.grade==='10 Black Label'?'black':'';return`<span class="gr ${cls}">${esc(c.gradeCompany)} ${esc(c.grade)}</span>`}
+const thumbHtml=(id,emoji)=>thumbs[id]?`<img class="thumb" src="${thumbs[id]}" alt="">`:`<div class="thumb">${emoji}</div>`;
 
-/* ---------- Accueil ---------- */
+/* ---------- Calculs globaux (cartes + items) ---------- */
+const calcI=it=>{const cost=num(it.buyPrice);const sold=has(it.sellPrice);const profit=sold?num(it.sellPrice)-cost:null;return{cost,sold,profit,roi:sold&&cost>0?profit/cost:NaN}};
+function allObjects(){return[...data.cartes.map(c=>({o:c,kind:'card',k:calc(c),grad:num(c.gradeCost),buy:num(c.buyPrice)})),...data.items.map(i=>({o:i,kind:'item',k:calcI(i),grad:0,buy:num(i.buyPrice)}))]}
 function totals(lo,hi){
-  const ins=c=>!lo||inR(c,lo,hi);
-  const sold=data.cartes.filter(c=>has(c.sellPrice)&&ins(c.sellDate||c.buyDate));
-  let ventes=0,coutVendu=0;sold.forEach(c=>{ventes+=num(c.sellPrice);coutVendu+=calc(c).cost});
-  const bought=data.cartes.filter(c=>ins(c.buyDate));
-  const achats=bought.reduce((s,c)=>s+num(c.buyPrice),0),grad=bought.reduce((s,c)=>s+num(c.gradeCost),0);
+  const ins=d=>!lo||inR(d,lo,hi);const all=allObjects();
+  const sold=all.filter(x=>x.k.sold&&ins(x.o.sellDate||x.o.buyDate));
+  let ventes=0,coutVendu=0,margeC=0,margeI=0;
+  sold.forEach(x=>{ventes+=num(x.o.sellPrice);coutVendu+=x.k.cost;if(x.kind==='card')margeC+=x.k.profit;else margeI+=x.k.profit});
+  const bought=all.filter(x=>ins(x.o.buyDate));
+  const achats=bought.reduce((s,x)=>s+x.buy,0),grad=bought.reduce((s,x)=>s+x.grad,0);
   const L=lo||new Date(2000,0,1),H=hi||new Date(8.64e15);
   const frais=data.frais.reduce((s,f)=>s+costInRange(f,L,H),0);
   const marge=ventes-coutVendu,net=marge-frais;
-  const stock=data.cartes.filter(c=>!has(c.sellPrice)).reduce((s,c)=>s+calc(c).cost,0);
-  return{sold,ventes,coutVendu,achats,grad,frais,marge,net,roi:(coutVendu+frais)>0?net/(coutVendu+frais):NaN,cash:ventes-achats-grad-frais,stock,nbStock:data.cartes.length-data.cartes.filter(c=>has(c.sellPrice)).length};
+  const stockL=all.filter(x=>!x.k.sold);
+  return{sold,ventes,coutVendu,margeC,margeI,achats,grad,frais,marge,net,roi:(coutVendu+frais)>0?net/(coutVendu+frais):NaN,cash:ventes-achats-grad-frais,
+    stock:stockL.reduce((s,x)=>s+x.k.cost,0),nbStock:stockL.length};
 }
+
+/* ---------- Choix carte / item ---------- */
+function renderChoose(){
+  app.innerHTML=`${noSheet()}<h2>Ajouter</h2>
+  <button class="btn big" data-act="new" style="margin-bottom:12px;padding:22px;font-size:18px">🃏 Une carte<br><small class="mut" style="font-size:13px">Raw ou gradée (PSA, CGC, PCA…)</small></button>
+  <button class="btn big" data-act="newItem" style="padding:22px;font-size:18px">📦 Un item<br><small class="mut" style="font-size:13px">ETB, UPC, Display, Coffret, Booster…</small></button>`;
+}
+
+/* ---------- Liste des cartes (accueil) ---------- */
 function renderHome(){
   const t=totals();
   let list=data.cartes.slice().reverse();
   if(filter==='stock')list=list.filter(c=>!has(c.sellPrice));if(filter==='sold')list=list.filter(c=>has(c.sellPrice));
   app.innerHTML=`${noSheet()}
   <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi hero"><small>Bénéfice net (frais annexes inclus)</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>ROI ${pct(t.roi)}</small></div>
+    <div class="kpi hero"><small>Bénéfice net total (cartes + items − frais annexes)</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>ROI ${pct(t.roi)}</small></div>
     <div class="kpi"><small>Ventes</small><b>${eur(t.ventes)}</b></div>
     <div class="kpi"><small>Achats + gradation</small><b>${eur(t.achats+t.grad)}</b></div>
     <div class="kpi"><small>Frais annexes</small><b>${eur(t.frais)}</b></div>
@@ -280,20 +308,41 @@ function renderHome(){
 function row(c){
   const k=calc(c);
   const right=k.sold?`<b class="${sgn(k.profit)}">${k.profit>=0?'+':''}${eur(k.profit)}</b><span class="mut">vendue ${eur(num(c.sellPrice))}</span>`:`<b>${eur(k.cost)}</b><span class="mut">coût</span>`;
-  return`<div class="item" data-act="edit" data-id="${esc(c.id)}">${thumbs[c.id]?`<img class="thumb" src="${thumbs[c.id]}" alt="">`:`<div class="thumb">${c.type==='Scellé'?'📦':'🃏'}</div>`}
+  return`<div class="item" data-act="edit" data-id="${esc(c.id)}">${thumbHtml(c.id,'🃏')}
     <div class="meta"><b>${esc(c.name||'Sans nom')}</b><small>${esc([c.number,c.set,c.lang].filter(Boolean).join(' · '))}</small>${gradeBadge(c)}${k.sold?'<span class="tag sold">Vendue</span>':''}</div>
     <div class="nums">${right}</div></div>`;
 }
 
-/* ---------- Formulaire carte ---------- */
-const opts=(arr,v)=>arr.map(x=>`<option ${String(v)===x?'selected':''}>${x}</option>`).join('');
-function renderForm(){
-  const c=editId?data.cartes.find(x=>String(x.id)===String(editId)):null;
-  const v=c||{type:'Carte',gradeCompany:'Non gradée',buyDate:today(),lang:'FR'};
-  const img=draft.thumb||(c&&thumbs[c.id]);
+/* ---------- Liste des items ---------- */
+function renderItems(){
+  const its=data.items;let list=its.slice().reverse();
+  if(ifilter==='stock')list=list.filter(i=>!has(i.sellPrice));if(ifilter==='sold')list=list.filter(i=>has(i.sellPrice));
+  const st=its.filter(i=>!has(i.sellPrice)),so=its.filter(i=>has(i.sellPrice));
+  const stockCost=st.reduce((s,i)=>s+num(i.buyPrice),0),nbStock=st.reduce((s,i)=>s+(num(i.qty)||1),0);
+  const ventes=so.reduce((s,i)=>s+num(i.sellPrice),0),marge=so.reduce((s,i)=>s+calcI(i).profit,0);
   app.innerHTML=`${noSheet()}
-  <div class="card photo">
-    ${img?`<img src="${img}" alt="">`:'<div style="font-size:34px">🃏</div><p class="mut" style="margin:4px 0 12px">Photo de la carte ou du boîtier gradé</p>'}
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="kpi"><small>Marge sur les items vendus</small><b class="${sgn(marge)}">${eur(marge)}</b></div>
+    <div class="kpi"><small>Ventes items</small><b>${eur(ventes)}</b></div>
+    <div class="kpi"><small>Items en stock</small><b>${nbStock}</b></div>
+    <div class="kpi"><small>Stock (coût)</small><b>${eur(stockCost)}</b></div>
+  </div>
+  <button class="btn pri big" data-act="newItem" style="margin-bottom:14px">📦 Ajouter un item</button>
+  <div class="bar" style="margin-bottom:10px">${[['all','Tous'],['stock','En stock'],['sold','Vendus']].map(([k,l])=>`<button class="chip ${ifilter===k?'on':''}" data-act="ifilter" data-k="${k}">${l}</button>`).join('')}
+    <button class="chip" data-act="refresh" style="margin-left:auto">⟳</button></div>
+  ${list.length?list.map(itemRow).join(''):'<div class="empty">Aucun item pour l’instant.<br><small>ETB, UPC, Display, Coffret…</small></div>'}`;
+}
+function itemRow(i){
+  const k=calcI(i);const q=num(i.qty)||1;
+  const right=k.sold?`<b class="${sgn(k.profit)}">${k.profit>=0?'+':''}${eur(k.profit)}</b><span class="mut">vendu ${eur(num(i.sellPrice))}</span>`:`<b>${eur(k.cost)}</b><span class="mut">coût</span>`;
+  return`<div class="item" data-act="editItem" data-id="${esc(i.id)}">${thumbHtml(i.id,'📦')}
+    <div class="meta"><b>${esc(i.name||'Sans nom')}${q>1?` <span class="mut">×${q}</span>`:''}</b><small>${esc([i.set,i.lang].filter(Boolean).join(' · '))}</small><span class="gr raw">${esc(i.cat||'Item')}</span>${k.sold?'<span class="tag sold">Vendu</span>':''}</div>
+    <div class="nums">${right}</div></div>`;
+}
+
+/* ---------- Photo (commun cartes / items) ---------- */
+const photoBlock=(img,emoji,txt)=>`<div class="card photo">
+    ${img?`<img src="${img}" alt="">`:`<div style="font-size:34px">${emoji}</div><p class="mut" style="margin:4px 0 12px">${txt}</p>`}
     <div class="row">
       <label class="btn" for="pCam" style="margin:0;color:var(--txt)">📷 Photo</label>
       <label class="btn" for="pLib" style="margin:0;color:var(--txt)">🖼️ Album</label>
@@ -301,22 +350,82 @@ function renderForm(){
     <input type="file" id="pCam" accept="image/*" capture="environment" class="hide"><input type="file" id="pLib" accept="image/*" class="hide">
     <p class="hint" id="aMsg">${getKey()?'Gemini remplit la fiche automatiquement.':'⚠ Ajoute ta clé Gemini dans Réglages.'}</p>
     <div class="chips" style="justify-content:center">${draft.results.length>1?draft.results.map((r,i)=>`<button class="chip ${draft.picked===i?'on':''}" data-act="pick" data-i="${i}">${esc(r.nom)}</button>`).join(''):''}</div>
-  </div>
+  </div>`;
+const isItemView=()=>view==='additem';
+const rerender=()=>isItemView()?renderItemForm():renderForm();
+const readAny=()=>isItemView()?readI():read();
+async function onPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  try{const img=await loadImage(file);draft.thumb=resize(img,300,.72);draft.big=resize(img,1600,.88);draft.results=[];
+    const keep=readAny();rerender();fill(keep);if(getKey())analyze();}
+  catch(err){toast(err.message)}
+}
+async function analyze(){
+  const m=$('#aMsg');const item=isItemView();
+  m.textContent=item?'✨ Gemini identifie le produit…':'✨ Gemini lit la carte…';gemStatus=s=>{const el=$('#aMsg');if(el)el.textContent=s};
+  try{const txt=await gemini([{text:item?PROMPT_ITEM:PROMPT},{inline_data:{mime_type:'image/jpeg',data:draft.big.split(',')[1]}}],item?SCHEMA_ITEM:SCHEMA);
+    let o;try{o=JSON.parse(txt)}catch(e){throw new Error('réponse illisible')}
+    draft.results=o.objets||[];const keep=readAny();rerender();fill(keep);
+    if(draft.results.length)pick(0);else $('#aMsg').textContent='Rien reconnu, remplis à la main.';}
+  catch(err){m.textContent='Erreur Gemini : '+err.message}
+}
+function pick(i){
+  const r=draft.results[i];if(!r)return;draft.picked=i;
+  document.querySelectorAll('.chip[data-act=pick]').forEach((c,j)=>c.classList.toggle('on',j===i));
+  const f=$('#f');
+  if(isItemView()){
+    ['name','set'].forEach(k=>f.elements[k].value='');
+    fill({name:r.nom,cat:ITEM_CATS.includes(r.categorie)?r.categorie:'Autre',set:r.serie,lang:r.langue,qty:r.quantite>0?r.quantite:1});
+  }else{
+    ['name','number','set','gradeCompany'].forEach(k=>f.elements[k].value='');
+    const comp=String(r.societe||'').trim();const raw=!comp||/non|raw|aucun/i.test(comp);
+    const known=COMPANIES.find(c=>c.toLowerCase()===comp.toLowerCase());
+    fill({name:r.nom,number:r.numero,set:r.serie,lang:r.langue,gradeCompany:raw?'Non gradée':(known||comp)});
+    f.elements.grade.value=raw?'':normGrade(r.note);f.oninput();
+  }
+  $('#aMsg').textContent=`✓ Fiche remplie (confiance ${r.confiance||'?'}). Vérifie et ajoute tes prix.`;
+}
+function fill(o){const f=$('#f');Object.entries(o).forEach(([k,v])=>{if(f.elements[k]&&v!==undefined&&v!==null&&v!=='')f.elements[k].value=v});f.oninput()}
+async function saveAny(kind){
+  if(busy)return;const o=kind==='item'?readI():read();
+  if(has(o.sellPrice)&&!o.sellDate)o.sellDate=today();
+  if(!has(o.sellPrice))o.sellDate='';
+  if(kind==='card')o.type='Carte';
+  o.id=editId||uid();
+  const b=$('#saveBtn');busy=true;b.disabled=true;b.textContent='Enregistrement…';
+  try{await sheetPost(kind==='item'?'saveItem':'saveCard',{data:o});
+    if(draft.thumb){thumbs[o.id]=draft.thumb;saveThumbs()}
+    toast(kind==='item'?'✓ Item enregistré dans le Google Sheet':'✓ Carte enregistrée dans le Google Sheet');
+    if(!editId&&draft.results.length>1&&draft.picked<draft.results.length-1){const nx=draft.picked+1;const keepT=draft.thumb,keepB=draft.big,res=draft.results;
+      draft={thumb:keepT,big:keepB,results:res,picked:-1};editId=null;rerender();pick(nx);}
+    else go(kind==='item'?'items':'home');}
+  catch(err){toast('Erreur : '+err.message);b.disabled=false;b.textContent='Enregistrer dans le Sheet'}
+  finally{busy=false}
+}
+
+/* ---------- Formulaire carte ---------- */
+const opts=(arr,v)=>arr.map(x=>`<option ${String(v)===x?'selected':''}>${x}</option>`).join('');
+function renderForm(){
+  const c=editId?data.cartes.find(x=>String(x.id)===String(editId)):null;
+  const v=c||{gradeCompany:'Non gradée',buyDate:today(),lang:'FR'};
+  app.innerHTML=`${noSheet()}<h2>${c?'Modifier la carte':'Ajouter une carte'}</h2>
+  ${photoBlock(draft.thumb||(c&&thumbs[c.id]),'🃏','Photo de la carte ou du boîtier gradé')}
   <form id="f" autocomplete="off">
     <div class="card">
       <label>Nom de la carte<input name="name" value="${esc(v.name)}" required></label>
       <div class="row"><label>Numéro<input name="number" value="${esc(v.number)}"></label><label>Série<input name="set" value="${esc(v.set)}"></label></div>
-      <div class="row"><label>Gradation<select name="gradeCompany">${opts(COMPANIES,v.gradeCompany||'Non gradée')}</select></label>
+      <div class="row"><label>Gradation<input name="gradeCompany" list="comps" value="${esc(v.gradeCompany||'Non gradée')}" onfocus="this.select()"></label>
         <label id="gradeL">Note<select name="grade"><option value="">—</option>${opts(GRADES,v.grade)}</select></label></div>
+      <datalist id="comps">${COMPANIES.map(c=>`<option value="${c}">`).join('')}</datalist>
     </div>
     <div class="card">
       <div class="row"><label>Prix d'achat (€)<input name="buyPrice" inputmode="decimal" value="${esc(v.buyPrice)}" placeholder="0"></label>
-        <label id="gcL">Coût gradation (€)<input name="gradeCost" inputmode="decimal" value="${esc(v.gradeCost)}" placeholder="0"></label></div>
+        <label>Coût gradation (€)<input name="gradeCost" inputmode="decimal" value="${esc(v.gradeCost)}" placeholder="0"></label></div>
       <label>Prix de vente (€) <span class="mut">— vide si pas encore vendue</span><input name="sellPrice" inputmode="decimal" value="${esc(v.sellPrice)}"></label>
       <div class="calc" id="live"></div>
-      <details style="margin-top:10px"><summary>Plus de détails (dates, langue, type)</summary>
+      <details style="margin-top:10px"><summary>Plus de détails (dates, langue)</summary>
         <div class="row"><label>Acheté le<input type="date" name="buyDate" value="${esc(v.buyDate)}"></label><label>Vendu le<input type="date" name="sellDate" value="${esc(v.sellDate)}"></label></div>
-        <div class="row"><label>Langue<input name="lang" value="${esc(v.lang)}"></label><label>Type<select name="type">${opts(TYPES,v.type)}</select></label></div>
+        <label>Langue<input name="lang" value="${esc(v.lang)}"></label>
       </details>
     </div>
     <button class="btn pri big" type="submit" id="saveBtn">Enregistrer dans le Sheet</button>
@@ -324,55 +433,53 @@ function renderForm(){
   </form>`;
   const f=$('#f');
   const upd=()=>{const o=read();const k=calc(o);
-    const graded=o.gradeCompany!=='Non gradée';$('#gradeL').classList.toggle('hide',!graded);
+    $('#gradeL').classList.toggle('hide',o.gradeCompany==='Non gradée'||!o.gradeCompany);
     let h=`<span>Coût total</span><b>${eur(k.cost)}</b>`;
     h+=k.sold?`<span class="t">Bénéfice</span><b class="t ${sgn(k.profit)}">${k.profit>=0?'+':''}${eur(k.profit)} · ${pct(k.roi)}</b>`:`<span class="mut">Statut</span><span class="mut">En stock</span>`;
     $('#live').innerHTML=h};
   f.oninput=upd;f.onchange=upd;upd();
-  f.onsubmit=e=>{e.preventDefault();saveCard()};
+  f.onsubmit=e=>{e.preventDefault();saveAny('card')};
   $('#pCam').onchange=onPhoto;$('#pLib').onchange=onPhoto;
 }
 function read(){const o={};new FormData($('#f')).forEach((v,k)=>o[k]=String(v).trim());
-  ['buyPrice','gradeCost','sellPrice'].forEach(k=>{o[k]=o[k]===''?'':num(o[k])});if(o.gradeCompany==='Non gradée')o.grade='';return o}
-function fill(o){const f=$('#f');Object.entries(o).forEach(([k,v])=>{if(f.elements[k]&&v!==undefined&&v!==null&&v!=='')f.elements[k].value=v});f.oninput()}
-async function onPhoto(e){
-  const file=e.target.files[0];if(!file)return;
-  try{const img=await loadImage(file);draft.thumb=resize(img,300,.72);draft.big=resize(img,1600,.88);draft.results=[];
-    const keep=read();renderForm();fill(keep);if(getKey())analyze();}
-  catch(err){toast(err.message)}
+  ['buyPrice','gradeCost','sellPrice'].forEach(k=>{o[k]=o[k]===''?'':num(o[k])});
+  if(!o.gradeCompany)o.gradeCompany='Non gradée';if(o.gradeCompany==='Non gradée')o.grade='';return o}
+
+/* ---------- Formulaire item ---------- */
+function renderItemForm(){
+  const it=editId?data.items.find(x=>String(x.id)===String(editId)):null;
+  const v=it||{cat:'ETB',qty:1,buyDate:today(),lang:'FR'};
+  app.innerHTML=`${noSheet()}<h2>${it?'Modifier l’item':'Ajouter un item'}</h2>
+  ${photoBlock(draft.thumb||(it&&thumbs[it.id]),'📦','Photo de l’ETB, de l’UPC, du display…')}
+  <form id="f" autocomplete="off">
+    <div class="card">
+      <label>Nom du produit<input name="name" value="${esc(v.name)}" placeholder="ex. ETB Évolutions Prismatiques" required></label>
+      <div class="row"><label>Type<select name="cat">${opts(ITEM_CATS,v.cat)}</select></label><label>Quantité<input name="qty" inputmode="numeric" value="${esc(v.qty??1)}"></label></div>
+      <div class="row"><label>Série<input name="set" value="${esc(v.set)}"></label><label>Langue<input name="lang" value="${esc(v.lang)}"></label></div>
+    </div>
+    <div class="card">
+      <label>Prix d'achat total (€) <span class="mut">— pour toute la quantité</span><input name="buyPrice" inputmode="decimal" value="${esc(v.buyPrice)}" placeholder="0"></label>
+      <label>Prix de vente total (€) <span class="mut">— vide si pas encore vendu</span><input name="sellPrice" inputmode="decimal" value="${esc(v.sellPrice)}"></label>
+      <div class="calc" id="live"></div>
+      <details style="margin-top:10px"><summary>Dates</summary>
+        <div class="row"><label>Acheté le<input type="date" name="buyDate" value="${esc(v.buyDate)}"></label><label>Vendu le<input type="date" name="sellDate" value="${esc(v.sellDate)}"></label></div>
+      </details>
+      <p class="hint">Tu as acheté 3 ETB et tu n'en vends qu'un ? Enregistre-les sur des lignes séparées.</p>
+    </div>
+    <button class="btn pri big" type="submit" id="saveBtn">Enregistrer dans le Sheet</button>
+    <div class="bar" style="margin-top:10px"><button class="btn" type="button" data-act="cancelItem">Annuler</button>${it?'<button class="btn dng" type="button" data-act="delItem">Supprimer</button>':''}</div>
+  </form>`;
+  const f=$('#f');
+  const upd=()=>{const o=readI();const k=calcI(o);const q=num(o.qty)||1;
+    let h=`<span>Coût total</span><b>${eur(k.cost)}</b>`;if(q>1)h+=`<span class="mut">soit par unité</span><span class="mut">${eur(k.cost/q)}</span>`;
+    h+=k.sold?`<span class="t">Bénéfice</span><b class="t ${sgn(k.profit)}">${k.profit>=0?'+':''}${eur(k.profit)} · ${pct(k.roi)}</b>`:`<span class="mut">Statut</span><span class="mut">En stock</span>`;
+    $('#live').innerHTML=h};
+  f.oninput=upd;f.onchange=upd;upd();
+  f.onsubmit=e=>{e.preventDefault();saveAny('item')};
+  $('#pCam').onchange=onPhoto;$('#pLib').onchange=onPhoto;
 }
-async function analyze(){
-  const m=$('#aMsg');m.textContent='✨ Gemini lit la carte…';gemStatus=s=>{const el=$('#aMsg');if(el)el.textContent=s};
-  try{const txt=await gemini([{text:PROMPT},{inline_data:{mime_type:'image/jpeg',data:draft.big.split(',')[1]}}]);
-    let o;try{o=JSON.parse(txt)}catch(e){throw new Error('réponse illisible')}
-    draft.results=o.objets||[];const keep=read();renderForm();fill(keep);
-    if(draft.results.length)pick(0);else $('#aMsg').textContent='Aucune carte reconnue, remplis à la main.';}
-  catch(err){m.textContent='Erreur Gemini : '+err.message}
-}
-function pick(i){
-  const r=draft.results[i];if(!r)return;draft.picked=i;
-  document.querySelectorAll('.chip[data-act=pick]').forEach((c,j)=>c.classList.toggle('on',j===i));
-  const f=$('#f');['name','number','set'].forEach(k=>f.elements[k].value='');
-  const comp=COMPANIES.includes(r.societe)?r.societe:'Non gradée';
-  fill({type:r.type,name:r.nom,number:r.numero,set:r.serie,lang:r.langue,gradeCompany:comp});
-  f.elements.grade.value=comp==='Non gradée'?'':normGrade(r.note);f.oninput();
-  $('#aMsg').textContent=`✓ Fiche remplie (confiance ${r.confiance||'?'}). Vérifie et ajoute tes prix.`;
-}
-async function saveCard(){
-  if(busy)return;const o=read();
-  if(has(o.sellPrice)&&!o.sellDate)o.sellDate=today();
-  if(!has(o.sellPrice))o.sellDate='';
-  o.id=editId||uid();
-  const b=$('#saveBtn');busy=true;b.disabled=true;b.textContent='Enregistrement…';
-  try{await sheetPost('saveCard',{data:o});
-    if(draft.thumb){thumbs[o.id]=draft.thumb;saveThumbs()}
-    toast('✓ Enregistrée dans le Google Sheet');
-    if(!editId&&draft.results.length>1&&draft.picked<draft.results.length-1){const nx=draft.picked+1;const keepT=draft.thumb,keepB=draft.big,res=draft.results;
-      draft={thumb:keepT,big:keepB,results:res,picked:-1};renderForm();pick(nx);}
-    else go('home');}
-  catch(err){toast('Erreur : '+err.message);b.disabled=false;b.textContent='Enregistrer dans le Sheet'}
-  finally{busy=false}
-}
+function readI(){const o={};new FormData($('#f')).forEach((v,k)=>o[k]=String(v).trim());
+  ['buyPrice','sellPrice'].forEach(k=>{o[k]=o[k]===''?'':num(o[k])});o.qty=Math.max(1,Math.round(num(o.qty))||1);return o}
 
 /* ---------- Frais ---------- */
 function renderCosts(){
@@ -405,24 +512,26 @@ function renderStats(){
   const n=new Date();const ms=[];
   for(let i=11;i>=0;i--){const a=new Date(n.getFullYear(),n.getMonth()-i,1),b=new Date(n.getFullYear(),n.getMonth()-i+1,0,23,59,59);ms.push({l:a.toLocaleDateString('fr-FR',{month:'short'}).replace('.',''),v:totals(a,b).net})}
   const byCat={};data.frais.forEach(f=>{const v=costInRange(f,lo||new Date(2000,0,1),hi||new Date(8.64e15));if(v)byCat[f.cat]=(byCat[f.cat]||0)+v});
-  const top=t.sold.map(c=>({c,k:calc(c)})).sort((a,b)=>b.k.profit-a.k.profit);
+  const top=t.sold.slice().sort((a,b)=>b.k.profit-a.k.profit);
   app.innerHTML=`<h2>Bilan</h2>
   <select id="per" style="margin:0 0 12px">${Object.entries(P).map(([k,l])=>`<option value="${k}" ${period===k?'selected':''}>${l}</option>`).join('')}</select>
   <div class="kpis">
     <div class="kpi hero"><small>Bénéfice net</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>${t.net>=0?'Tu gagnes de l’argent':'Tu perds de l’argent'} · ROI ${pct(t.roi)}</small></div>
-    <div class="kpi"><small>Ventes (${t.sold.length} cartes)</small><b>${eur(t.ventes)}</b></div>
-    <div class="kpi"><small>Coût des cartes vendues</small><b>${eur(t.coutVendu)}</b></div>
+    <div class="kpi"><small>Ventes (${t.sold.length} objets)</small><b>${eur(t.ventes)}</b></div>
+    <div class="kpi"><small>Coût des objets vendus</small><b>${eur(t.coutVendu)}</b></div>
     <div class="kpi"><small>Marge sur les ventes</small><b class="${sgn(t.marge)}">${eur(t.marge)}</b></div>
+    <div class="kpi"><small>dont cartes</small><b class="${sgn(t.margeC)}">${eur(t.margeC)}</b></div>
+    <div class="kpi"><small>dont items</small><b class="${sgn(t.margeI)}">${eur(t.margeI)}</b></div>
     <div class="kpi"><small>Frais annexes</small><b class="neg">−${eur(t.frais)}</b></div>
     <div class="kpi"><small>Achats</small><b>${eur(t.achats)}</b></div>
     <div class="kpi"><small>Gradation</small><b>${eur(t.grad)}</b></div>
     <div class="kpi"><small>Trésorerie</small><b class="${sgn(t.cash)}">${eur(t.cash)}</b></div>
     <div class="kpi"><small>Stock non vendu (coût)</small><b>${eur(t.stock)}</b></div>
   </div>
-  <p class="hint">Bénéfice net = prix de vente − (achat + gradation) des cartes vendues − bot, cookgroup, proxies… Trésorerie = ventes − tout ce que tu as dépensé, stock compris.</p>
+  <p class="hint">Bénéfice net = prix de vente − (achat + gradation) des cartes et items vendus − bot, cookgroup, proxies… Trésorerie = ventes − tout ce que tu as dépensé, stock compris.</p>
   <h3>Bénéfice net par mois</h3><div class="card">${chart(ms)}</div>
   ${Object.keys(byCat).length?`<h3>Frais annexes</h3><div class="card" style="padding:4px 10px"><table>${Object.entries(byCat).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${eur(v)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="n"><b>${eur(t.frais)}</b></td></tr></table></div>`:''}
-  ${top.length?`<h3>Ventes</h3><div class="card" style="padding:4px 10px"><table><tr><th>Carte</th><th class="n">Coût</th><th class="n">Vente</th><th class="n">Bénéf.</th></tr>${top.map(({c,k})=>`<tr data-act="edit" data-id="${esc(c.id)}" style="cursor:pointer"><td>${esc(c.name)}<br><small class="mut">${esc(c.gradeCompany&&c.gradeCompany!=='Non gradée'?c.gradeCompany+' '+c.grade:'Raw')}</small></td><td class="n">${eur(k.cost)}</td><td class="n">${eur(num(c.sellPrice))}</td><td class="n ${sgn(k.profit)}">${eur(k.profit)}</td></tr>`).join('')}</table></div>`:''}
+  ${top.length?`<h3>Ventes</h3><div class="card" style="padding:4px 10px"><table><tr><th>Objet</th><th class="n">Coût</th><th class="n">Vente</th><th class="n">Bénéf.</th></tr>${top.map(({o:c,kind,k})=>`<tr data-act="${kind==='item'?'editItem':'edit'}" data-id="${esc(c.id)}" style="cursor:pointer"><td>${kind==='item'?'📦 ':''}${esc(c.name)}<br><small class="mut">${esc(kind==='item'?(c.cat||'Item'):(c.gradeCompany&&c.gradeCompany!=='Non gradée'?c.gradeCompany+' '+c.grade:'Raw'))}</small></td><td class="n">${eur(k.cost)}</td><td class="n">${eur(num(c.sellPrice))}</td><td class="n ${sgn(k.profit)}">${eur(k.profit)}</td></tr>`).join('')}</table></div>`:''}
   ${data.url?`<a class="btn big" style="text-align:center;margin-top:6px" href="${esc(data.url)}" target="_blank" rel="noopener">Ouvrir le Google Sheet</a>`:''}`;
   $('#per').onchange=e=>{period=e.target.value;renderStats()};
 }
@@ -472,6 +581,11 @@ document.addEventListener('click',async e=>{
   const n=e.target.closest('#nav button');if(n){go(n.dataset.v);return}
   const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
   if(a==='new')go('add');
+  else if(a==='newItem')go('additem');
+  else if(a==='editItem')go('additem',el.dataset.id);
+  else if(a==='cancelItem')go('items');
+  else if(a==='ifilter'){ifilter=el.dataset.k;renderItems()}
+  else if(a==='delItem'){if(!confirm('Supprimer cet item du Sheet ?'))return;try{await sheetPost('deleteItem',{id:editId});delete thumbs[editId];saveThumbs();toast('Supprimé');go('items')}catch(err){toast('Erreur : '+err.message)}}
   else if(a==='edit')go('add',el.dataset.id);
   else if(a==='cancel')go('home');
   else if(a==='goSettings')go('settings');

@@ -5,6 +5,9 @@
  */
 const CARTES = ['ID', 'Achetée le', 'Type', 'Nom', 'Numéro', 'Série', 'Langue', 'Gradation', 'Note', 'Prix achat', 'Coût gradation', 'Prix vente', 'Vendue le', 'Bénéfice', 'Statut'];
 const CK = ['id', 'buyDate', 'type', 'name', 'number', 'set', 'lang', 'gradeCompany', 'grade', 'buyPrice', 'gradeCost', 'sellPrice', 'sellDate'];
+const ITEMS = ['ID', 'Acheté le', 'Catégorie', 'Nom', 'Série', 'Langue', 'Quantité', 'Prix achat', 'Prix vente', 'Vendu le', 'Bénéfice', 'Statut'];
+const IK = ['id', 'buyDate', 'cat', 'name', 'set', 'lang', 'qty', 'buyPrice', 'sellPrice', 'sellDate'];
+const BILAN_V = '3';
 const FRAIS = ['ID', 'Nom', 'Catégorie', 'Montant', 'Fréquence', 'Début', 'Fin', 'Total payé'];
 const FK = ['id', 'name', 'cat', 'amount', 'freq', 'start', 'end'];
 const MONEY = '#,##0.00 "€"';
@@ -40,18 +43,19 @@ function setup() {
     header_(f, FRAIS);
     f.setColumnWidth(2, 200);
   }
-  if (!ss.getSheetByName('Bilan')) {
-    const b = ss.insertSheet('Bilan', 0);
-    b.getRange(1, 1, BILAN.length, 1).setValues(BILAN.map(r => [r[0]]));
-    bilanFormulas_(b);
-    b.getRange('A1').setFontSize(16).setFontWeight('bold');
-    b.getRange('B5:B11').setNumberFormat(PROFIT);
-    b.getRange('B13:B14').setNumberFormat(PROFIT);
-    b.getRange('B12').setNumberFormat('0.0%');
-    b.getRange('A11:B11').setFontWeight('bold').setFontSize(13).setBackground('#fff4c2');
-    b.setColumnWidth(1, 330);
-    b.setColumnWidth(2, 140);
+  if (!ss.getSheetByName('Items')) {
+    const it = ss.insertSheet('Items');
+    ['C', 'D', 'E', 'F'].forEach(l => it.getRange(l + ':' + l).setNumberFormat('@'));
+    it.getRange('H:I').setNumberFormat(MONEY);
+    it.getRange('K:K').setNumberFormat(PROFIT);
+    it.getRange('B:B').setNumberFormat('dd/mm/yyyy');
+    it.getRange('J:J').setNumberFormat('dd/mm/yyyy');
+    header_(it, ITEMS);
+    it.setColumnWidth(4, 220);
   }
+  let b = ss.getSheetByName('Bilan');
+  if (!b) b = ss.insertSheet('Bilan', 0);
+  if (PropertiesService.getScriptProperties().getProperty('BILAN_V') !== BILAN_V) buildBilan_(b);
   repair_();
 }
 
@@ -59,18 +63,37 @@ const BILAN = [
   ['Bilan PokeTrade', ''],
   ['', ''],
   ['Cartes achetées', '=COUNTA(Cartes!A2:A)'],
-  ['Cartes vendues', '=COUNT(Cartes!L2:L)'],
-  ['Total achats', '=SUM(Cartes!J2:J)'],
+  ['Items achetés (lignes)', '=COUNTA(Items!A2:A)'],
+  ['Objets vendus', '=COUNT(Cartes!L2:L)+COUNT(Items!I2:I)'],
+  ['Total achats (cartes + items)', '=SUM(Cartes!J2:J)+SUM(Items!H2:H)'],
   ['Total gradation', '=SUM(Cartes!K2:K)'],
-  ['Total ventes', '=SUM(Cartes!L2:L)'],
-  ['Coût des cartes vendues (achat + gradation)', '=SUMIFS(Cartes!J2:J,Cartes!L2:L,"<>")+SUMIFS(Cartes!K2:K,Cartes!L2:L,"<>")'],
-  ['Marge sur les ventes', '=B7-B8'],
+  ['Total ventes', '=SUM(Cartes!L2:L)+SUM(Items!I2:I)'],
+  ['Coût des objets vendus', '=SUMIFS(Cartes!J2:J,Cartes!L2:L,"<>")+SUMIFS(Cartes!K2:K,Cartes!L2:L,"<>")+SUMIFS(Items!H2:H,Items!I2:I,"<>")'],
+  ['Marge sur les ventes', '=B8-B9'],
   ['Frais annexes (bot, cookgroup, proxies…)', '=SUM(Frais!H2:H)'],
-  ['BÉNÉFICE NET', '=B9-B10'],
-  ['ROI net', '=IFERROR(B11/(B8+B10),0)'],
-  ['Stock non vendu (coût)', '=B5+B6-B8'],
-  ['Trésorerie (ventes − toutes les dépenses)', '=B7-B5-B6-B10']
+  ['BÉNÉFICE NET', '=B10-B11'],
+  ['ROI net', '=IFERROR(B12/(B9+B11),0)'],
+  ['Stock non vendu (coût)', '=B6+B7-B9'],
+  ['Trésorerie (ventes − toutes les dépenses)', '=B8-B6-B7-B11'],
+  ['', ''],
+  ['Marge sur les cartes', '=SUM(Cartes!N2:N)'],
+  ['Marge sur les items', '=SUM(Items!K2:K)']
 ];
+
+function buildBilan_(b) {
+  b.clear();
+  b.getRange(1, 1, BILAN.length, 1).setValues(BILAN.map(r => [r[0]]));
+  bilanFormulas_(b);
+  b.getRange('A1').setFontSize(16).setFontWeight('bold');
+  b.getRange('B6:B12').setNumberFormat(PROFIT);
+  b.getRange('B14:B15').setNumberFormat(PROFIT);
+  b.getRange('B17:B18').setNumberFormat(PROFIT);
+  b.getRange('B13').setNumberFormat('0.0%');
+  b.getRange('A12:B12').setFontWeight('bold').setFontSize(13).setBackground('#fff4c2');
+  b.setColumnWidth(1, 330);
+  b.setColumnWidth(2, 140);
+  PropertiesService.getScriptProperties().setProperty('BILAN_V', BILAN_V);
+}
 
 /* Séparateur des formules : "," ou ";" selon la langue du Sheet (détecté une fois). */
 function sep_() {
@@ -94,15 +117,15 @@ function bilanFormulas_(b) {
 /* Répare les formules si elles affichent une erreur (ex. ancienne version du script). */
 function repair_() {
   const ss = ss_();
-  const b = ss.getSheetByName('Bilan');
-  if (b && /ERROR|ERREUR/i.test(b.getRange('B8').getDisplayValue())) {
-    PropertiesService.getScriptProperties().deleteProperty('SEP');
-    bilanFormulas_(b);
-    const c = ss.getSheetByName('Cartes');
-    for (let r = 2; r <= c.getLastRow(); r++) rowFormulas_('Cartes', c, r);
-    const f = ss.getSheetByName('Frais');
-    for (let r = 2; r <= f.getLastRow(); r++) rowFormulas_('Frais', f, r);
-  }
+  const bad = rg => /ERROR|ERREUR/i.test(rg.getDisplayValue());
+  const b = ss.getSheetByName('Bilan'), c = ss.getSheetByName('Cartes'), f = ss.getSheetByName('Frais'), it = ss.getSheetByName('Items');
+  const broken = bad(b.getRange('B9')) || (c.getLastRow() > 1 && bad(c.getRange(2, 15))) || (f.getLastRow() > 1 && bad(f.getRange(2, 8)));
+  if (!broken) return;
+  PropertiesService.getScriptProperties().deleteProperty('SEP');
+  bilanFormulas_(b);
+  for (let r = 2; r <= c.getLastRow(); r++) rowFormulas_('Cartes', c, r);
+  for (let r = 2; r <= f.getLastRow(); r++) rowFormulas_('Frais', f, r);
+  for (let r = 2; r <= it.getLastRow(); r++) rowFormulas_('Items', it, r);
 }
 
 function read_() {
@@ -119,7 +142,7 @@ function read_() {
       return o;
     });
   };
-  return { ok: true, url: ss.getUrl(), cartes: rd('Cartes', CK), frais: rd('Frais', FK) };
+  return { ok: true, url: ss.getUrl(), cartes: rd('Cartes', CK), items: rd('Items', IK), frais: rd('Frais', FK) };
 }
 
 function cell_(k, v) {
@@ -128,7 +151,7 @@ function cell_(k, v) {
     const p = String(v).split('-').map(Number);
     return p.length === 3 ? new Date(p[0], p[1] - 1, p[2], 12) : '';
   }
-  if (['buyPrice', 'gradeCost', 'sellPrice', 'amount'].indexOf(k) >= 0) return Number(v);
+  if (['buyPrice', 'gradeCost', 'sellPrice', 'amount', 'qty'].indexOf(k) >= 0) return Number(v);
   return String(v);
 }
 
@@ -152,6 +175,9 @@ function rowFormulas_(name, sh, r) {
   if (name === 'Cartes') {
     F_(sh.getRange(r, 14), '=IF(L' + r + '="","",L' + r + '-J' + r + '-K' + r + ')');
     F_(sh.getRange(r, 15), '=IF(L' + r + '="","En stock","Vendue")');
+  } else if (name === 'Items') {
+    F_(sh.getRange(r, 11), '=IF(I' + r + '="","",I' + r + '-H' + r + ')');
+    F_(sh.getRange(r, 12), '=IF(I' + r + '="","En stock","Vendu")');
   } else {
     const fin = 'IF(G' + r + '="",TODAY(),MIN(G' + r + ',TODAY()))';
     F_(sh.getRange(r, 8), '=IFERROR(IF(E' + r + '="Ponctuel",D' + r + ',(IF(E' + r + '="Annuel",DATEDIF(F' + r + ',' + fin + ',"Y"),DATEDIF(F' + r + ',' + fin + ',"M"))+1)*D' + r + '),0)');
@@ -180,6 +206,8 @@ function doPost(e) {
     setup();
     if (req.action === 'saveCard') upsert_('Cartes', CK, req.data);
     else if (req.action === 'deleteCard') del_('Cartes', req.id);
+    else if (req.action === 'saveItem') upsert_('Items', IK, req.data);
+    else if (req.action === 'deleteItem') del_('Items', req.id);
     else if (req.action === 'saveCost') upsert_('Frais', FK, req.data);
     else if (req.action === 'deleteCost') del_('Frais', req.id);
     SpreadsheetApp.flush();
