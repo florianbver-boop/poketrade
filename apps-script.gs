@@ -142,7 +142,7 @@ function read_() {
       return o;
     });
   };
-  return { ok: true, url: ss.getUrl(), cartes: rd('Cartes', CK), items: rd('Items', IK), frais: rd('Frais', FK) };
+  return { ok: true, v: 3, url: ss.getUrl(), cartes: rd('Cartes', CK), items: rd('Items', IK), frais: rd('Frais', FK) };
 }
 
 function cell_(k, v) {
@@ -210,6 +210,7 @@ function doPost(e) {
     else if (req.action === 'deleteItem') del_('Items', req.id);
     else if (req.action === 'saveCost') upsert_('Frais', FK, req.data);
     else if (req.action === 'deleteCost') del_('Frais', req.id);
+    else throw new Error('Action inconnue : ' + req.action);
     SpreadsheetApp.flush();
     return out_(read_());
   } catch (err) {

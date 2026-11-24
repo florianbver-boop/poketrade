@@ -93,7 +93,7 @@ svg text{fill:var(--mut);font-size:10px}
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='2.6';
+const APP_VERSION='2.7';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -134,20 +134,28 @@ const FREQS=['Mensuel','Annuel','Ponctuel'];
 /* ---------- Données (Google Sheet) ---------- */
 let data={cartes:[],items:[],frais:[],url:''};
 try{const c=JSON.parse(LS.get('cache','null'));if(c)data={...data,...c,items:c.items||[]}}catch(e){}
-function setData(j){data={cartes:j.cartes||[],items:j.items||[],frais:j.frais||[],url:j.url||data.url};LS.set('cache',JSON.stringify(data));LS.set('synced',new Date().toISOString());syncInfo()}
+const PENDING=()=>{try{return JSON.parse(LS.get('pending_items','[]'))}catch(e){return[]}};
+const setPending=a=>LS.set('pending_items',JSON.stringify(a));
+const scriptOld=()=>getSheet()&&data.v===undefined;
+function setData(j){data={v:j.v,cartes:j.cartes||[],items:[...(j.items||[]),...(j.v?[]:PENDING())],frais:j.frais||[],url:j.url||data.url};LS.set('cache',JSON.stringify(data));LS.set('synced',new Date().toISOString());syncInfo()}
 function syncInfo(s){$('#sync').textContent=s||(getSheet()?'✓ Google Sheet':'⚠ Sheet non connecté')}
 const SHEET_HTML_ERR='Le script Google a répondu par une page web au lieu des données. Dans Apps Script : Déployer → Gérer les déploiements → ✏️ → Version : Nouvelle version, Accès : « Tout le monde » → Déployer.';
 async function readSheet(r){const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error(SHEET_HTML_ERR)}}
+async function flushPending(){const pend=PENDING();if(!pend.length||!data.v)return;
+  for(const it of pend){try{await sheetPost('saveItem',{data:it});setPending(PENDING().filter(x=>x.id!==it.id))}catch(e){return}}
+  toast(`✓ ${pend.length} item(s) en attente envoyé(s) dans le Sheet`)}
 async function sheetGet(){
   const u=getSheet();if(!u)throw new Error('Google Sheet non connecté (Réglages)');
   const r=await fetch(u,{redirect:'follow'}).catch(()=>{throw new Error('Impossible de joindre le Google Sheet (réseau ou URL).')});const j=await readSheet(r);
-  if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);return j;
+  if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);if(j.v&&PENDING().length){await flushPending();}return j;
 }
 async function sheetPost(action,payload){
   const u=getSheet();if(!u)throw new Error('Connecte d’abord ton Google Sheet dans Réglages');
   syncInfo('⟳ Enregistrement…');
   try{const r=await fetch(u,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})}).catch(()=>{throw new Error('Impossible de joindre le Google Sheet (réseau).')});
-    const j=await readSheet(r);if(!j.ok)throw new Error(j.error||'Erreur Sheet');setData(j);}
+    const j=await readSheet(r);if(!j.ok)throw new Error(j.error||'Erreur Sheet');
+    if(!j.v&&/Item/.test(action)){setData(j);const e=new Error('OLD_SCRIPT');e.old=true;throw e}
+    setData(j);}
   catch(e){syncInfo();throw e}
 }
 
@@ -257,7 +265,8 @@ function render(){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
   ({home:renderHome,items:renderItems,choose:renderChoose,add:renderForm,additem:renderItemForm,costs:renderCosts,stats:renderStats,settings:renderSettings})[view]();
 }
-const noSheet=()=>getSheet()?'':`<div class="warn"><b>Connecte ton Google Sheet</b><br><span class="mut" style="font-size:13px">Sans ça, rien n'est enregistré.</span><br><br><button class="btn pri" data-act="goSettings">Configurer (5 min, une seule fois)</button></div>`;
+const oldBanner=()=>scriptOld()?`<div class="warn"><b>⚠ Ton script Google est trop ancien</b><br><span style="font-size:13px">Les items ne peuvent pas être enregistrés et le Bilan du Sheet affiche #ERROR!. Recolle le code (⚙︎ Réglages → Comment obtenir cette URL) puis Déployer → Gérer les déploiements → ✏️ → Nouvelle version.${PENDING().length?`<br><b>${PENDING().length} item(s) en attente</b> sur ce téléphone, envoyé(s) automatiquement après la mise à jour.`:''}</span><br><br><button class="btn pri" data-act="goSettings">Voir la marche à suivre</button></div>`:'';
+const noSheet=()=>oldBanner()+(getSheet()?'':`<div class="warn"><b>Connecte ton Google Sheet</b><br><span class="mut" style="font-size:13px">Sans ça, rien n'est enregistré.</span><br><br><button class="btn pri" data-act="goSettings">Configurer (5 min, une seule fois)</button></div>`);
 function gradeBadge(c){if(!c.gradeCompany||c.gradeCompany==='Non gradée'||!c.grade)return'<span class="gr raw">Raw</span>';
   const cls=c.grade==='10 Gold Label'?'gold':c.grade==='10 Black Label'?'black':'';return`<span class="gr ${cls}">${esc(c.gradeCompany)} ${esc(c.grade)}</span>`}
 const thumbHtml=(id,emoji)=>thumbs[id]?`<img class="thumb" src="${thumbs[id]}" alt="">`:`<div class="thumb">${emoji}</div>`;
@@ -399,7 +408,10 @@ async function saveAny(kind){
     if(!editId&&draft.results.length>1&&draft.picked<draft.results.length-1){const nx=draft.picked+1;const keepT=draft.thumb,keepB=draft.big,res=draft.results;
       draft={thumb:keepT,big:keepB,results:res,picked:-1};editId=null;rerender();pick(nx);}
     else go(kind==='item'?'items':'home');}
-  catch(err){toast('Erreur : '+err.message);b.disabled=false;b.textContent='Enregistrer dans le Sheet'}
+  catch(err){
+    if(err.old&&kind==='item'){const pend=PENDING().filter(x=>x.id!==o.id);pend.push(o);setPending(pend);if(draft.thumb){thumbs[o.id]=draft.thumb;saveThumbs()}
+      data.items=[...data.items.filter(x=>x.id!==o.id),o];toast('⚠ Item gardé sur le téléphone : ton script Google est trop ancien. Recolle-le (Réglages) et il sera envoyé automatiquement.');go('items');}
+    else{toast('Erreur : '+err.message);b.disabled=false;b.textContent='Enregistrer dans le Sheet'}}
   finally{busy=false}
 }
 
