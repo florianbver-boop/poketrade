@@ -39,6 +39,17 @@ input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
 .kpi small{display:block;color:var(--mut);font-size:12px}
 .kpi b{font-size:20px;display:block;margin-top:2px}
+.kpi[data-act]{cursor:pointer;position:relative}
+.kpi[data-act]:after{content:'›';position:absolute;right:10px;top:8px;color:var(--mut);font-size:16px}
+.kpi[data-act]:active{border-color:var(--acc)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);border:1px solid var(--line);width:100%;max-width:760px;max-height:86vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h2{display:flex;align-items:center;gap:8px}.sheet h2 span{flex:1}
+.drow{display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)}
+.drow[data-act]{cursor:pointer}.drow .l{flex:1;min-width:0}.drow .l b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.drow .l small{color:var(--mut);font-size:12px}
+.drow .a{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.dgroup{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:14px 0 2px;display:flex;justify-content:space-between}
+.dtotal{display:flex;justify-content:space-between;font-weight:700;font-size:17px;padding:12px 2px 4px}
 .kpi.hero{grid-column:1/-1;text-align:center;padding:16px}
 .kpi.hero b{font-size:32px}
 .pos{color:var(--pos)}.neg{color:var(--neg)}.mut{color:var(--mut)}
@@ -87,13 +98,13 @@ svg text{fill:var(--mut);font-size:10px}
   <button data-v="items"><b>📦</b>Items</button>
   <button data-v="choose" class="add"><b>＋</b>Ajouter</button>
   <button data-v="costs"><b>€</b>Frais</button>
-  <button data-v="stats"><b>◔</b>Bilan</button>
+  <button data-v="stats"><b>◔</b>Dashboard</button>
 </nav>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='2.9';
+const APP_VERSION='3.0';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -259,7 +270,7 @@ function resize(img,max,q){const s=Math.min(1,max/Math.max(img.naturalWidth,img.
 let view='home',editId=null,draft=null,costEdit=null,period='all',filter='all',ifilter='all',busy=false;
 const app=$('#app');
 const newDraft=()=>({thumb:null,big:null,results:[],picked:-1});
-function go(v,id=null){view=v;if(v==='add'||v==='additem'){editId=id;draft=newDraft()}render();scrollTo(0,0)}
+function go(v,id=null){if(typeof closeDetail==='function')closeDetail();view=v;if(v==='add'||v==='additem'){editId=id;draft=newDraft()}render();scrollTo(0,0)}
 function render(){
   const tab={add:'home',additem:'items',settings:''}[view]??view;
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
@@ -285,7 +296,8 @@ function totals(lo,hi){
   const frais=data.frais.reduce((s,f)=>s+costInRange(f,L,H),0);
   const marge=ventes-coutVendu,net=marge-frais;
   const stockL=all.filter(x=>!x.k.sold);
-  return{sold,ventes,coutVendu,margeC,margeI,achats,grad,frais,marge,net,roi:(coutVendu+frais)>0?net/(coutVendu+frais):NaN,cash:ventes-achats-grad-frais,
+  const fraisL=data.frais.map(f=>({f,v:costInRange(f,L,H)})).filter(x=>x.v>0);
+  return{sold,bought,stockL,fraisL,ventes,coutVendu,margeC,margeI,achats,grad,frais,marge,net,roi:(coutVendu+frais)>0?net/(coutVendu+frais):NaN,cash:ventes-achats-grad-frais,
     stock:stockL.reduce((s,x)=>s+x.k.cost,0),nbStock:stockL.length};
 }
 
@@ -525,28 +537,74 @@ function renderStats(){
   for(let i=11;i>=0;i--){const a=new Date(n.getFullYear(),n.getMonth()-i,1),b=new Date(n.getFullYear(),n.getMonth()-i+1,0,23,59,59);ms.push({l:a.toLocaleDateString('fr-FR',{month:'short'}).replace('.',''),v:totals(a,b).net})}
   const byCat={};data.frais.forEach(f=>{const v=costInRange(f,lo||new Date(2000,0,1),hi||new Date(8.64e15));if(v)byCat[f.cat]=(byCat[f.cat]||0)+v});
   const top=t.sold.slice().sort((a,b)=>b.k.profit-a.k.profit);
-  app.innerHTML=`<h2>Bilan</h2>
+  const st={c:t.stockL.filter(x=>x.kind==='card'),i:t.stockL.filter(x=>x.kind==='item')};
+  const K=(key,label,val,cls='')=>`<div class="kpi" data-act="detail" data-k="${key}"><small>${label}</small><b class="${cls}">${val}</b></div>`;
+  app.innerHTML=`<h2>Dashboard</h2>
   <select id="per" style="margin:0 0 12px">${Object.entries(P).map(([k,l])=>`<option value="${k}" ${period===k?'selected':''}>${l}</option>`).join('')}</select>
   <div class="kpis">
-    <div class="kpi hero"><small>Bénéfice net</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>${t.net>=0?'Tu gagnes de l’argent':'Tu perds de l’argent'} · ROI ${pct(t.roi)}</small></div>
-    <div class="kpi"><small>Ventes (${t.sold.length} objets)</small><b>${eur(t.ventes)}</b></div>
-    <div class="kpi"><small>Coût des objets vendus</small><b>${eur(t.coutVendu)}</b></div>
-    <div class="kpi"><small>Marge sur les ventes</small><b class="${sgn(t.marge)}">${eur(t.marge)}</b></div>
-    <div class="kpi"><small>dont cartes</small><b class="${sgn(t.margeC)}">${eur(t.margeC)}</b></div>
-    <div class="kpi"><small>dont items</small><b class="${sgn(t.margeI)}">${eur(t.margeI)}</b></div>
-    <div class="kpi"><small>Frais annexes</small><b class="neg">−${eur(t.frais)}</b></div>
-    <div class="kpi"><small>Achats</small><b>${eur(t.achats)}</b></div>
-    <div class="kpi"><small>Gradation</small><b>${eur(t.grad)}</b></div>
-    <div class="kpi"><small>Trésorerie</small><b class="${sgn(t.cash)}">${eur(t.cash)}</b></div>
-    <div class="kpi"><small>Stock non vendu (coût)</small><b>${eur(t.stock)}</b></div>
+    <div class="kpi hero" data-act="detail" data-k="net"><small>Bénéfice net</small><b class="${sgn(t.net)}">${eur(t.net)}</b><small>${t.net>=0?'Tu gagnes de l’argent':'Tu perds de l’argent'} · ROI ${pct(t.roi)}</small></div>
+    ${K('ventes',`Ventes (${t.sold.length} objets)`,eur(t.ventes))}
+    ${K('coutVendu','Coût des objets vendus',eur(t.coutVendu))}
+    ${K('marge','Marge sur les ventes',eur(t.marge),sgn(t.marge))}
+    ${K('margeC','dont cartes',eur(t.margeC),sgn(t.margeC))}
+    ${K('margeI','dont items',eur(t.margeI),sgn(t.margeI))}
+    ${K('frais','Frais annexes','−'+eur(t.frais),'neg')}
+    ${K('achats',`Achats (${t.bought.length})`,eur(t.achats))}
+    ${K('grad','Gradation',eur(t.grad))}
+    ${K('cash','Trésorerie',eur(t.cash),sgn(t.cash))}
+    ${K('roi','ROI net',pct(t.roi),sgn(t.net))}
+    ${K('stock',`Stock non vendu (${t.stockL.length})`,eur(t.stock))}
+    ${K('stockC',`Stock cartes (${st.c.length})`,eur(st.c.reduce((s,x)=>s+x.k.cost,0)))}
+    ${K('stockI',`Stock items (${st.i.length})`,eur(st.i.reduce((s,x)=>s+x.k.cost,0)))}
   </div>
-  <p class="hint">Bénéfice net = prix de vente − (achat + gradation) des cartes et items vendus − bot, cookgroup, proxies… Trésorerie = ventes − tout ce que tu as dépensé, stock compris.</p>
+  <p class="hint">Touche un chiffre pour voir le détail.</p>
   <h3>Bénéfice net par mois</h3><div class="card">${chart(ms)}</div>
   ${Object.keys(byCat).length?`<h3>Frais annexes</h3><div class="card" style="padding:4px 10px"><table>${Object.entries(byCat).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${eur(v)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="n"><b>${eur(t.frais)}</b></td></tr></table></div>`:''}
   ${top.length?`<h3>Ventes</h3><div class="card" style="padding:4px 10px"><table><tr><th>Objet</th><th class="n">Coût</th><th class="n">Vente</th><th class="n">Bénéf.</th></tr>${top.map(({o:c,kind,k})=>`<tr data-act="${kind==='item'?'editItem':'edit'}" data-id="${esc(c.id)}" style="cursor:pointer"><td>${kind==='item'?'📦 ':''}${esc(c.name)}<br><small class="mut">${esc(kind==='item'?(c.cat||'Item'):(c.gradeCompany&&c.gradeCompany!=='Non gradée'?c.gradeCompany+' '+c.grade:'Raw'))}</small></td><td class="n">${eur(k.cost)}</td><td class="n">${eur(num(c.sellPrice))}</td><td class="n ${sgn(k.profit)}">${eur(k.profit)}</td></tr>`).join('')}</table></div>`:''}
   ${data.url?`<a class="btn big" style="text-align:center;margin-top:6px" href="${esc(data.url)}" target="_blank" rel="noopener">Ouvrir le Google Sheet</a>`:''}`;
   $('#per').onchange=e=>{period=e.target.value;renderStats()};
+  if(detailKey)showDetail(detailKey,t);
 }
+
+/* ---------- Détail d'un chiffre du dashboard ---------- */
+let detailKey=null;
+const objRow=(x,amount,sub)=>({name:(x.kind==='item'?'📦 ':'🃏 ')+(x.o.name||'Sans nom')+(x.kind==='item'&&num(x.o.qty)>1?' ×'+num(x.o.qty):''),sub,amount,act:x.kind==='item'?'editItem':'edit',id:x.o.id});
+const fdate=s=>{const d=D(s);return d?d.toLocaleDateString('fr-FR'):''};
+const gradeTxt=o=>o.gradeCompany&&o.gradeCompany!=='Non gradée'&&o.grade?o.gradeCompany+' '+o.grade:'';
+function groupRows(list,map){const c=list.filter(x=>x.kind==='card'),i=list.filter(x=>x.kind==='item');const out=[];
+  [[c,'Cartes'],[i,'Items']].forEach(([l,lab])=>{if(!l.length)return;const rows=l.map(map);out.push({group:`${lab} (${l.length})`,gtotal:rows.reduce((s,r)=>s+r.amount,0)},...rows.sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)))});return out}
+function detailData(k,t){
+  const sumRow=(name,amount,key,sub='')=>({name,amount,sub,act:key?'detail':null,k:key});
+  switch(k){
+    case 'net':return{title:'Bénéfice net',explain:'Marge sur les objets vendus, moins les frais annexes de la période.',rows:[sumRow('Marge sur les ventes',t.marge,'marge'),sumRow('Frais annexes',-t.frais,'frais')],total:t.net};
+    case 'roi':return{title:'ROI net',explain:'Bénéfice net ÷ (coût des objets vendus + frais annexes).',rows:[sumRow('Bénéfice net',t.net,'net'),sumRow('Coût des objets vendus',t.coutVendu,'coutVendu'),sumRow('Frais annexes',t.frais,'frais')],totalTxt:pct(t.roi)};
+    case 'cash':return{title:'Trésorerie',explain:'Ce que tu as encaissé moins tout ce que tu as dépensé sur la période, stock compris.',rows:[sumRow('Ventes encaissées',t.ventes,'ventes'),sumRow('Achats',-t.achats,'achats'),sumRow('Gradation',-t.grad,'grad'),sumRow('Frais annexes',-t.frais,'frais')],total:t.cash};
+    case 'ventes':return{title:'Ventes',explain:'Prix de vente des objets vendus sur la période.',rows:groupRows(t.sold,x=>objRow(x,num(x.o.sellPrice),'Vendu le '+fdate(x.o.sellDate))),total:t.ventes};
+    case 'coutVendu':return{title:'Coût des objets vendus',explain:'Prix d’achat + gradation des objets vendus.',rows:groupRows(t.sold,x=>objRow(x,x.k.cost,`achat ${eur(x.buy)}${x.grad?' + gradation '+eur(x.grad):''}`)),total:t.coutVendu};
+    case 'marge':return{title:'Marge sur les ventes',explain:'Prix de vente − (achat + gradation), objet par objet.',rows:groupRows(t.sold,x=>objRow(x,x.k.profit,`vendu ${eur(num(x.o.sellPrice))} − coût ${eur(x.k.cost)} · ${pct(x.k.roi)}`)),total:t.marge};
+    case 'margeC':{const l=t.sold.filter(x=>x.kind==='card');return{title:'Marge sur les cartes',explain:'Cartes vendues sur la période.',rows:l.map(x=>objRow(x,x.k.profit,`vendue ${eur(num(x.o.sellPrice))} − coût ${eur(x.k.cost)}${gradeTxt(x.o)?' · '+gradeTxt(x.o):''}`)).sort((a,b)=>b.amount-a.amount),total:t.margeC}}
+    case 'margeI':{const l=t.sold.filter(x=>x.kind==='item');return{title:'Marge sur les items',explain:'Items vendus sur la période.',rows:l.map(x=>objRow(x,x.k.profit,`vendu ${eur(num(x.o.sellPrice))} − coût ${eur(x.k.cost)}`)).sort((a,b)=>b.amount-a.amount),total:t.margeI}}
+    case 'frais':return{title:'Frais annexes',explain:'Montants payés sur la période (abonnements comptés à chaque échéance).',rows:t.fraisL.sort((a,b)=>b.v-a.v).map(({f,v})=>({name:f.name,sub:`${f.cat} · ${f.freq} · ${eur(num(f.amount))}${f.freq==='Ponctuel'?'':' par échéance'}`,amount:v,act:'costEditGo',id:f.id})),total:t.frais};
+    case 'achats':return{title:'Achats',explain:'Prix d’achat des objets achetés sur la période (vendus ou non).',rows:groupRows(t.bought,x=>objRow(x,x.buy,'Acheté le '+fdate(x.o.buyDate)+(x.k.sold?' · vendu':' · en stock'))),total:t.achats};
+    case 'grad':{const l=t.bought.filter(x=>x.grad>0);return{title:'Gradation',explain:'Coûts de gradation des cartes achetées sur la période.',rows:l.map(x=>objRow(x,x.grad,gradeTxt(x.o)||'')).sort((a,b)=>b.amount-a.amount),total:t.grad}}
+    case 'stock':return{title:'Stock non vendu',explain:'Tout ce qui n’est pas encore vendu, au prix de revient (achat + gradation).',rows:groupRows(t.stockL,x=>objRow(x,x.k.cost,[gradeTxt(x.o),x.kind==='item'?x.o.cat:'','acheté le '+fdate(x.o.buyDate)].filter(Boolean).join(' · '))),total:t.stock};
+    case 'stockC':case 'stockI':{const kind=k==='stockC'?'card':'item';const l=t.stockL.filter(x=>x.kind===kind);const rows=l.map(x=>objRow(x,x.k.cost,[gradeTxt(x.o),kind==='item'?x.o.cat:'','acheté le '+fdate(x.o.buyDate)].filter(Boolean).join(' · '))).sort((a,b)=>b.amount-a.amount);
+      return{title:kind==='card'?'Stock cartes':'Stock items',explain:'Au prix de revient (achat + gradation).',rows,total:rows.reduce((s,r)=>s+r.amount,0)}}
+  }
+  return{title:'',rows:[],total:0};
+}
+function showDetail(k,t){
+  const d=detailData(k,t);const m=document.createElement('div');m.className='modal';m.id='modal';
+  const rows=d.rows.length?d.rows.map(r=>r.group?`<div class="dgroup"><span>${esc(r.group)}</span><span>${eur(r.gtotal)}</span></div>`
+    :`<div class="drow" ${r.act?`data-act="${r.act}" ${r.k?`data-k="${r.k}"`:''} ${r.id?`data-id="${esc(r.id)}"`:''}`:''}><div class="l"><b>${esc(r.name)}</b>${r.sub?`<small>${esc(r.sub)}</small>`:''}</div><div class="a ${r.amount<0?'neg':''}">${eur(r.amount)}</div>${r.act?'<span class="mut">›</span>':''}</div>`).join('')
+    :'<div class="empty">Rien sur cette période.</div>';
+  m.innerHTML=`<div class="sheet"><h2><span>${esc(d.title)}</span><button class="btn" data-act="closeDetail">✕</button></h2>
+    <p class="hint" style="margin-top:-6px">${esc(d.explain||'')}</p>${rows}
+    <div class="dtotal"><span>Total</span><span class="${['net','marge','margeC','margeI','cash'].includes(k)?sgn(d.total):''}">${d.totalTxt||eur(d.total)}</span></div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)closeDetail()});
+}
+function closeDetail(){detailKey=null;const m=$('#modal');if(m)m.remove()}
 function chart(ms){const W=640,H=210,top=16,bot=180,bw=(W-16)/ms.length;
   const mp=Math.max(0,...ms.map(m=>m.v)),mn=Math.max(0,...ms.map(m=>-m.v));if(!mp&&!mn)return'<div class="empty">Pas encore de données</div>';
   const sc=(bot-top)/(mp+mn),z=top+mp*sc;
@@ -593,6 +651,10 @@ function renderSettings(){
 document.addEventListener('click',async e=>{
   const n=e.target.closest('#nav button');if(n){go(n.dataset.v);return}
   const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
+  if(a==='detail'){closeDetail();detailKey=el.dataset.k;if(view==='stats')renderStats();return}
+  if(a==='closeDetail'){closeDetail();return}
+  if(a==='costEditGo'){closeDetail();costEdit=el.dataset.id;go('costs');return}
+  if($('#modal')&&(a==='edit'||a==='editItem'))closeDetail();
   if(a==='new')go('add');
   else if(a==='newItem')go('additem');
   else if(a==='editItem')go('additem',el.dataset.id);
