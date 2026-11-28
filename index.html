@@ -109,7 +109,7 @@ svg text{fill:var(--mut);font-size:10px}
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='3.1';
+const APP_VERSION='3.2';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -230,10 +230,12 @@ async function callModel(model,parts,schema,extra={}){
   lastGround=j.candidates?.[0]?.groundingMetadata||null;lastModel=model;
   return txt;
 }
-const busyErr=e=>[429,500,502,503,504].includes(e.status)||/UNAVAILABLE|RESOURCE_EXHAUSTED|overload|high demand|try again/i.test(e.code+' '+e.message);
+const quotaErr=e=>e.status===429||/RESOURCE_EXHAUSTED|quota|rate limit|exceeded/i.test(e.code+' '+e.message);
+const overErr=e=>!quotaErr(e)&&([500,502,503,504].includes(e.status)||/UNAVAILABLE|overload|high demand|try again/i.test(e.code+' '+e.message));
+const busyErr=e=>quotaErr(e)||overErr(e);
 const goneErr=e=>e.status===404||/no longer available|not found|not supported/i.test(e.message);
 /* Liste des modèles Gemini de ton compte qui savent lire une image (mise en cache 1 jour). */
-async function fallbackModels(main){
+async function fallbackModels(main,max=4){
   let list=null;
   try{const c=JSON.parse(LS.get('models_cache','null'));if(c&&Date.now()-c.t<864e5)list=c.m}catch(e){}
   if(!list){
@@ -248,22 +250,31 @@ async function fallbackModels(main){
       LS.set('models_cache',JSON.stringify({t:Date.now(),m:list}));
     }catch(e){list=[]}
   }
-  return list.filter(n=>n!==main).slice(0,4);
+  return list.filter(n=>n!==main).slice(0,max);
 }
 async function gemini(parts,json=SCHEMA,extra={}){
   if(!getKey())throw new Error('Ajoute ta clé Gemini dans Réglages');
-  const main=getModel();let last;
+  const main=getModel();const tries=[];let last;
+  const why=e=>quotaErr(e)?'quota atteint':overErr(e)?'surchargé':goneErr(e)?'indisponible':(e.message||'erreur');
   for(let a=0;a<3;a++){
     try{return await callModel(main,parts,json,extra)}
-    catch(e){last=e;if(goneErr(e))break;if(!busyErr(e))throw e;
-      if(a<2){gemStatus(`Gemini surchargé, nouvel essai (${a+2}/3)…`);await sleep(1500*(a+1))}}
+    catch(e){last=e;if(goneErr(e)||quotaErr(e)){tries.push([main,why(e)]);break}
+      if(!overErr(e))throw e;
+      if(a<2){gemStatus(`Gemini surchargé, nouvel essai (${a+2}/3)…`);await sleep(1500*(a+1))}else tries.push([main,why(e)])}
   }
   for(const m of await fallbackModels(main)){
-    gemStatus(`Essai avec ${m}…`);
-    try{const t=await callModel(m,parts,json,extra);gemStatus(`✓ Lu avec ${m}`);return t}
-    catch(e){last=e;if(!busyErr(e)&&!goneErr(e)&&e.status!==400)throw e}
+    gemStatus(`${tries.length?main+' : '+tries[0][1]+' → ':''}essai avec ${m}…`);
+    try{const t=await callModel(m,parts,json,extra);gemStatus(`✓ Fait avec ${m} (${main} : ${tries[0]?.[1]||'erreur'})`);return t}
+    catch(e){last=e;tries.push([m,why(e)]);if(!busyErr(e)&&!goneErr(e)&&e.status!==400)throw e}
   }
-  throw new Error((last&&busyErr(last))?'Gemini est saturé en ce moment. Réessaie dans quelques minutes (ou remplis la fiche à la main).':(last?last.message:'Erreur'));
+  const allQuota=tries.length&&tries.every(t=>t[1]==='quota atteint');
+  const anyQuota=tries.some(t=>t[1]==='quota atteint');
+  const detail=tries.map(t=>t[0]+' : '+t[1]).join(' · ');
+  let msg;
+  if(allQuota||anyQuota)msg=`Quota gratuit de ta clé Gemini atteint (limite par minute ou par jour). Attends une minute ; si ça persiste, la limite du jour est atteinte : réessaie demain ou active la facturation dans Google AI Studio. Détail : ${detail}`;
+  else if(last&&overErr(last))msg=`Gemini est vraiment saturé en ce moment. Réessaie dans quelques minutes. Détail : ${detail}`;
+  else msg=(last?last.message:'Erreur')+(detail?' · '+detail:'');
+  const err=new Error(msg);err.status=last?.status;err.quota=anyQuota;throw err;
 }
 function normGrade(g){g=String(g||'').trim();if(!g)return'';const l=g.toLowerCase();
   if(l.includes('black'))return'10 Black Label';if(l.includes('gold')||l.includes('pristine'))return'10 Gold Label';
@@ -642,7 +653,8 @@ function renderSettings(){
   </div>
   <div class="card"><h3 style="margin-top:0">2 · Gemini</h3>
     <label>Clé API Gemini<input id="key" type="password" value="${esc(getKey())}" placeholder="AIza…"></label>
-    <label>Modèle<input id="model" value="${esc(getModel())}"></label>
+    <label>Modèle<input id="model" value="${esc(getModel())}" list="modelList"></label><datalist id="modelList"></datalist>
+    <p class="hint" id="modelHint">Si un modèle affiche « quota atteint », essaie-en un autre de la liste (ex. une version « lite »).</p>
     <div class="bar"><button class="btn pri" data-act="saveKey">Enregistrer et tester</button><span class="hint" id="kMsg"></span></div>
     <p class="hint">Clé gratuite : <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Gardée uniquement sur cet appareil.</p>
   </div>
@@ -651,6 +663,7 @@ function renderSettings(){
     <p class="hint">Adresse de l'app : <a href="${APP_URL}">${APP_URL.replace('https://','')}</a></p>
     <div class="bar" style="margin-top:10px"><button class="btn" data-act="copyUrl">📋 Copier l'adresse</button><button class="btn" data-act="reload">⟳ Recharger la dernière version</button></div>
   </div>`;
+  if(getKey())fallbackModels('',30).then(l=>{const d=$('#modelList');if(d)d.innerHTML=l.concat([]).map(m=>`<option value="${m}">`).join('')}).catch(()=>{});
   fetch('apps-script.gs').then(r=>r.ok?r.text():Promise.reject()).then(t=>$('#code')&&($('#code').value=t)).catch(()=>{$('#code')&&($('#code').value='Code disponible ici : https://github.com/florianbver-boop/poketrade/blob/main/apps-script.gs')});
 }
 
@@ -770,7 +783,7 @@ async function vintedGenerate(){
   let text,noWeb=false;
   try{
     try{text=await gemini(parts,null,{tools:[{google_search:{}}]})}
-    catch(e){if(e.status===400||/tool|search|grounding/i.test(e.message)){noWeb=true;lastGround=null;text=await gemini(parts,null)}else throw e}
+    catch(e){if(e.status===400||e.quota||/tool|search|grounding/i.test(e.message)){gemStatus('Recherche web indisponible ou quota atteint, essai sans recherche web…');noWeb=true;lastGround=null;text=await gemini(parts,null)}else throw e}
     const g=lastGround||{};
     const sources=(g.groundingChunks||[]).map(c=>c.web).filter(Boolean);
     vinted.out={text,sources,noWeb,date:new Date().toLocaleString('fr-FR'),model:lastModel};
