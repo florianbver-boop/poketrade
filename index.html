@@ -17,7 +17,7 @@ header h1 span{color:var(--acc)}
 #sync{font-size:12px;color:var(--mut)}
 main{max-width:760px;margin:0 auto;padding:14px 14px 100px}
 nav{position:fixed;bottom:0;left:0;right:0;z-index:5;background:#151820;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;max-width:150px;background:none;border:0;color:var(--mut);padding:9px 2px 10px;font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button{flex:1;max-width:150px;background:none;border:0;color:var(--mut);padding:9px 0 10px;font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button b{font-size:19px;line-height:1}
 nav button.on{color:var(--acc)}
 nav button.add b{background:var(--acc);color:#111;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px}
@@ -42,6 +42,10 @@ input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 .kpi[data-act]{cursor:pointer;position:relative}
 .kpi[data-act]:after{content:'›';position:absolute;right:10px;top:8px;color:var(--mut);font-size:16px}
 .kpi[data-act]:active{border-color:var(--acc)}
+.vtext{white-space:pre-wrap;font-size:14px;line-height:1.5}
+.vtext .vh{display:block;font-weight:700;font-size:16px;color:var(--acc);margin-top:14px}
+.vblock{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0}
+.vblock pre{white-space:pre-wrap;font:14px/1.45 system-ui,-apple-system,sans-serif;margin:0 0 8px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--card);border:1px solid var(--line);width:100%;max-width:760px;max-height:86vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
 .sheet h2{display:flex;align-items:center;gap:8px}.sheet h2 span{flex:1}
@@ -99,12 +103,13 @@ svg text{fill:var(--mut);font-size:10px}
   <button data-v="choose" class="add"><b>＋</b>Ajouter</button>
   <button data-v="costs"><b>€</b>Frais</button>
   <button data-v="stats"><b>◔</b>Dashboard</button>
+  <button data-v="vinted"><b>🏷️</b>Vinted</button>
 </nav>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ---------- Version ---------- */
-const APP_VERSION='3.0';
+const APP_VERSION='3.1';
 const APP_URL='https://florianbver-boop.github.io/poketrade/';
 
 /* ---------- Réglages locaux ---------- */
@@ -213,14 +218,16 @@ let gemStatus=()=>{};
 const netErr=()=>{const e=new Error(location.hostname.endsWith('github.io')
   ?'Impossible de joindre Gemini (réseau). Vérifie ta connexion, coupe un éventuel VPN / bloqueur de contenu, puis réessaie.'
   :'Cette page ne peut pas appeler Gemini. Ouvre l’app ici : florianbver-boop.github.io/poketrade');e.status=0;return e};
-async function callModel(model,parts,schema){
+let lastGround=null,lastModel='';
+async function callModel(model,parts,schema,extra={}){
   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':getKey()},
-     body:JSON.stringify({contents:[{parts}],generationConfig:schema?{responseMimeType:'application/json',responseSchema:schema,temperature:0.1}:{}})}).catch(()=>{throw netErr()});
+     body:JSON.stringify({contents:[{parts}],...(extra.tools?{tools:extra.tools}:{}),generationConfig:schema?{responseMimeType:'application/json',responseSchema:schema,temperature:0.1}:{temperature:0.4}})}).catch(()=>{throw netErr()});
   const j=await r.json().catch(()=>({}));
   if(!r.ok){const e=new Error(j.error?.message||('HTTP '+r.status));e.status=r.status;e.code=j.error?.status||'';throw e}
   const txt=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
   if(!txt){const e=new Error('Réponse vide');e.status=503;throw e}
+  lastGround=j.candidates?.[0]?.groundingMetadata||null;lastModel=model;
   return txt;
 }
 const busyErr=e=>[429,500,502,503,504].includes(e.status)||/UNAVAILABLE|RESOURCE_EXHAUSTED|overload|high demand|try again/i.test(e.code+' '+e.message);
@@ -243,17 +250,17 @@ async function fallbackModels(main){
   }
   return list.filter(n=>n!==main).slice(0,4);
 }
-async function gemini(parts,json=SCHEMA){
+async function gemini(parts,json=SCHEMA,extra={}){
   if(!getKey())throw new Error('Ajoute ta clé Gemini dans Réglages');
   const main=getModel();let last;
   for(let a=0;a<3;a++){
-    try{return await callModel(main,parts,json)}
+    try{return await callModel(main,parts,json,extra)}
     catch(e){last=e;if(goneErr(e))break;if(!busyErr(e))throw e;
       if(a<2){gemStatus(`Gemini surchargé, nouvel essai (${a+2}/3)…`);await sleep(1500*(a+1))}}
   }
   for(const m of await fallbackModels(main)){
     gemStatus(`Essai avec ${m}…`);
-    try{const t=await callModel(m,parts,json);gemStatus(`✓ Lu avec ${m}`);return t}
+    try{const t=await callModel(m,parts,json,extra);gemStatus(`✓ Lu avec ${m}`);return t}
     catch(e){last=e;if(!busyErr(e)&&!goneErr(e)&&e.status!==400)throw e}
   }
   throw new Error((last&&busyErr(last))?'Gemini est saturé en ce moment. Réessaie dans quelques minutes (ou remplis la fiche à la main).':(last?last.message:'Erreur'));
@@ -274,7 +281,7 @@ function go(v,id=null){if(typeof closeDetail==='function')closeDetail();view=v;i
 function render(){
   const tab={add:'home',additem:'items',settings:''}[view]??view;
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
-  ({home:renderHome,items:renderItems,choose:renderChoose,add:renderForm,additem:renderItemForm,costs:renderCosts,stats:renderStats,settings:renderSettings})[view]();
+  ({home:renderHome,items:renderItems,choose:renderChoose,add:renderForm,additem:renderItemForm,costs:renderCosts,stats:renderStats,vinted:renderVinted,settings:renderSettings})[view]();
 }
 const oldBanner=()=>scriptOld()?`<div class="warn"><b>⚠ Ton script Google est trop ancien</b><br><span style="font-size:13px">Les items ne peuvent pas être enregistrés et le Bilan du Sheet affiche #ERROR!. Recolle le code (⚙︎ Réglages → Comment obtenir cette URL) puis Déployer → Gérer les déploiements → ✏️ → Nouvelle version.${PENDING().length?`<br><b>${PENDING().length} item(s) en attente</b> sur ce téléphone, envoyé(s) automatiquement après la mise à jour.`:''}</span><br><br><button class="btn pri" data-act="goSettings">Voir la marche à suivre</button></div>`:'';
 const noSheet=()=>oldBanner()+(getSheet()?'':`<div class="warn"><b>Connecte ton Google Sheet</b><br><span class="mut" style="font-size:13px">Sans ça, rien n'est enregistré.</span><br><br><button class="btn pri" data-act="goSettings">Configurer (5 min, une seule fois)</button></div>`);
@@ -453,7 +460,7 @@ function renderForm(){
       </details>
     </div>
     <button class="btn pri big" type="submit" id="saveBtn">Enregistrer dans le Sheet</button>
-    <div class="bar" style="margin-top:10px"><button class="btn" type="button" data-act="cancel">Annuler</button>${c?'<button class="btn dng" type="button" data-act="del">Supprimer</button>':''}</div>
+    <div class="bar" style="margin-top:10px"><button class="btn" type="button" data-act="cancel">Annuler</button>${c&&!has(c.sellPrice)?`<button class="btn" type="button" data-act="toVinted" data-id="${esc(c.id)}">🏷️ Annonce Vinted</button>`:''}${c?'<button class="btn dng" type="button" data-act="del">Supprimer</button>':''}</div>
   </form>`;
   const f=$('#f');
   const upd=()=>{const o=read();const k=calc(o);
@@ -491,7 +498,7 @@ function renderItemForm(){
       <p class="hint">Tu as acheté 3 ETB et tu n'en vends qu'un ? Enregistre-les sur des lignes séparées.</p>
     </div>
     <button class="btn pri big" type="submit" id="saveBtn">Enregistrer dans le Sheet</button>
-    <div class="bar" style="margin-top:10px"><button class="btn" type="button" data-act="cancelItem">Annuler</button>${it?'<button class="btn dng" type="button" data-act="delItem">Supprimer</button>':''}</div>
+    <div class="bar" style="margin-top:10px"><button class="btn" type="button" data-act="cancelItem">Annuler</button>${it&&!has(it.sellPrice)?`<button class="btn" type="button" data-act="toVinted" data-id="${esc(it.id)}">🏷️ Annonce Vinted</button>`:''}${it?'<button class="btn dng" type="button" data-act="delItem">Supprimer</button>':''}</div>
   </form>`;
   const f=$('#f');
   const upd=()=>{const o=readI();const k=calcI(o);const q=num(o.qty)||1;
@@ -647,6 +654,131 @@ function renderSettings(){
   fetch('apps-script.gs').then(r=>r.ok?r.text():Promise.reject()).then(t=>$('#code')&&($('#code').value=t)).catch(()=>{$('#code')&&($('#code').value='Code disponible ici : https://github.com/florianbver-boop/poketrade/blob/main/apps-script.gs')});
 }
 
+
+/* ---------- Annonces Vinted ---------- */
+let vinted={photos:[],objId:'',objKind:'',busy:false,out:null};
+try{const l=JSON.parse(LS.get('vinted_last','null'));if(l)vinted.out=l}catch(e){}
+const VINTED_PROMPT=`Tu es un expert en cartes à collectionner Pokémon et en revente sur Vinted (marché français). Ton rôle est d'analyser l'image fournie (carte gradée, carte brute ou produit scellé) et de produire une fiche complète de mise en vente calibrée sur les transactions réelles.
+
+RÈGLES DE FORMATAGE STRICTES :
+- N'utilise JAMAIS de puces rondes ou de listes à puces Markdown (*, -, +) dans ta réponse. Utilise des tirets simples en texte brut ou des sauts de ligne clairs.
+- Place le titre et la description finale dans des blocs de texte brut (\`\`\`text) pour faciliter le copier-coller direct.
+- Sois précis, factuel et rigoureux sur l'identification de la carte, de son numéro, de son extension/stamp, de sa langue et de sa gradation.
+
+ÉTAPE 1 - ANALYSE VISUELLE ET IDENTIFICATION :
+Identifie le nom exact du Pokémon / produit, le numéro de carte (ex: 152/128), le set/extension (ex: 30e Anniversaire, Chaos Ascendant, Règne Delta), la présence d'un stamp ou d'une édition spéciale, et la langue (FR par défaut si visible).
+Si la carte est gradée : relève l'organisme (ex: CCC Grading), la note globale (ex: 9.5, 10), le type d'étiquette (Standard / Neuf+ ou Gold Label / Parfait) et chaque sous-note (Centrage, Côtés, Coins, Surface).
+Si le produit est scellé (ETB, coffret, etc.) : vérifie l'intégrité du film/scellé visible sur la photo.
+
+ÉTAPE 2 - ESTIMATION DE PRIX BASÉE SUR LES VENTES RÉELLES :
+Utilise la recherche web pour trouver des ventes réussies récentes (eBay ventes terminées, Cardmarket, GCC, transactions Vinted effectives) et base-toi sur la valeur marchande réelle, pas sur des prix d'affichage vitrine irréalistes.
+Compare systématiquement la valeur de la carte brute (raw) à celle de la version gradée ou du label concerné, ainsi qu'à la hiérarchie des cartes du même set.
+Propose un prix affiché conseillé sur Vinted (incluant une marge de négociation réaliste), une fourchette d'offre intéressante et un prix plancher.
+Si tu ne trouves pas de ventes récentes fiables pour cet objet précis, dis-le clairement et donne une fourchette prudente en expliquant sur quoi elle repose.
+
+ÉTAPE 3 - GÉNÉRATION DE L'ANNONCE VINTED :
+Rédige un titre clair, optimisé pour la recherche Vinted, contenant le nom, le numéro, la gradation/label si applicable, l'extension/stamp et la langue.
+Rédige une description naturelle, rassurante et structurée en texte brut (sans puces), reprenant les caractéristiques exactes, les sous-notes si gradée, l'état, le conditionnement d'expédition et l'ouverture aux offres raisonnables.
+
+ÉTAPE 4 - STRATÉGIE DE VENTE ET CONSEILS PHOTOS :
+Fournis 4 paliers de prix clairs : Vente rapide, Vente raisonnable, Prix de départ ambitieux, et Prix à tenter si pas pressé (Hold).
+Donne un conseil d'exécution court sur la gestion des offres et des favoris.
+Liste en texte brut les photos complémentaires recommandées pour rassurer l'acheteur.
+
+STRUCTURE DE RÉPONSE ATTENDUE (respecte exactement ces 4 sections et ces intitulés) :
+1. Prix conseillé pour Vinted
+Grade / Label :
+Prix conseillé :
+Prix affiché :
+Offre intéressante :
+Prix plancher :
+Analyse marché : (courte, basée sur les ventes réelles trouvées)
+
+2. Annonce Vinted prête à copier
+Titre :
+\`\`\`text
+[Titre]
+\`\`\`
+Description :
+\`\`\`text
+[Description]
+\`\`\`
+
+3. Stratégie de vente
+Vente rapide :
+Vente raisonnable :
+Prix de départ ambitieux :
+Prix à tenter si pas pressé (Hold) :
+Conseil offres et favoris :
+
+4. Photos complémentaires recommandées`;
+function vintedContext(){
+  const all=allObjects();const x=all.find(x=>x.o.id===vinted.objId);if(!x)return'';
+  const o=x.o;
+  return `\n\nINFORMATIONS DE MON STOCK (à utiliser pour vérifier ton identification, sans les recopier si la photo les contredit) :
+${x.kind==='item'?`Produit scellé : ${o.name} (${o.cat||''}), série ${o.set||'?'}, langue ${o.lang||'?'}, quantité ${o.qty||1}`:`Carte : ${o.name} ${o.number||''}, série ${o.set||'?'}, langue ${o.lang||'?'}, gradation ${gradeTxt(o)||'non gradée'}`}
+Mon prix de revient (achat${x.grad?' + gradation':''}) : ${eur(x.k.cost)}. Si ton prix plancher est inférieur à ce montant, signale-le clairement dans l'analyse marché.`;
+}
+function renderVinted(){
+  const objs=allObjects().filter(x=>!x.k.sold);
+  const sel=objs.find(x=>x.o.id===vinted.objId);
+  const imgs=vinted.photos.length?vinted.photos:(sel&&thumbs[sel.o.id]?[thumbs[sel.o.id]]:[]);
+  app.innerHTML=`<h2>Annonce Vinted</h2>
+  <div class="card">
+    <label>Objet de ton stock <span class="mut">(facultatif, pour comparer à ton prix de revient)</span>
+      <select id="vObj"><option value="">— Aucun —</option>${objs.map(x=>`<option value="${esc(x.o.id)}" ${x.o.id===vinted.objId?'selected':''}>${x.kind==='item'?'📦':'🃏'} ${esc(x.o.name)}${x.o.number?' '+esc(x.o.number):''}${gradeTxt(x.o)?' · '+esc(gradeTxt(x.o)):''} · ${eur(x.k.cost)}</option>`).join('')}</select></label>
+    <div class="photo">
+      ${imgs.length?`<div class="bar" style="justify-content:center;margin-bottom:10px">${imgs.map(s=>`<img src="${s}" alt="" style="height:120px;width:auto;margin:0;border-radius:8px">`).join('')}</div>`:'<div style="font-size:34px">📝</div><p class="mut" style="margin:4px 0 12px">Ajoute 1 à 4 photos : face, dos du boîtier (sous-notes), étiquette…</p>'}
+      <div class="row">
+        <label class="btn" for="vCam" style="margin:0;color:var(--txt)">📷 Photo</label>
+        <label class="btn" for="vLib" style="margin:0;color:var(--txt)">🖼️ Album</label>
+        ${vinted.photos.length?'<button class="btn" data-act="vClear">Effacer</button>':''}
+      </div>
+      <input type="file" id="vCam" accept="image/*" capture="environment" class="hide"><input type="file" id="vLib" accept="image/*" multiple class="hide">
+      ${!vinted.photos.length&&sel&&thumbs[sel.o.id]?'<p class="hint">Photo de ta fiche utilisée (petite). Pour lire les sous-notes, ajoute une vraie photo.</p>':''}
+    </div>
+    <button class="btn pri big" id="vGo" data-act="vGenerate" ${vinted.busy||!imgs.length?'disabled':''}>${vinted.busy?'Analyse en cours… (30 s à 1 min)':'✨ Générer l’annonce'}</button>
+    <p class="hint" id="vMsg">${getKey()?'Gemini cherche les ventes récentes sur le web avant de proposer un prix.':'⚠ Ajoute ta clé Gemini dans Réglages.'}</p>
+  </div>
+  <div id="vOut">${vinted.out?renderVintedOut(vinted.out):''}</div>`;
+  $('#vObj').onchange=e=>{vinted.objId=e.target.value;renderVinted()};
+  const onFiles=async e=>{const files=[...e.target.files].slice(0,4);if(!files.length)return;
+    try{for(const f of files){if(vinted.photos.length>=4)break;const img=await loadImage(f);vinted.photos.push(resize(img,1600,.88))}}catch(err){toast(err.message)}
+    renderVinted()};
+  $('#vCam').onchange=onFiles;$('#vLib').onchange=onFiles;
+}
+function renderVintedOut(out){
+  const blocks=[];
+  let html=esc(out.text).replace(/```(?:text)?\n?([\s\S]*?)```\n?/g,(m,b)=>{blocks.push(b.trim());const i=blocks.length-1;
+    return `\u0000B${i}\u0000`});
+  html=html.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^(\d\. .+)$/gm,'<span class="vh">$1</span>');
+  html=html.replace(/\u0000B(\d+)\u0000/g,(m,i)=>`<div class="vblock"><pre>${blocks[i]}</pre><button class="btn" data-act="vCopy" data-i="${i}">📋 Copier</button></div>`);
+  vinted.blocks=blocks.map(b=>b.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&'));
+  const src=(out.sources||[]).slice(0,8);
+  return `<div class="card vout">${out.noWeb?'<div class="warn" style="margin-bottom:10px">⚠ La recherche web n’a pas pu être utilisée : les prix sont des estimations de Gemini, à vérifier.</div>':''}
+    <div class="vtext">${html}</div>
+    ${src.length?`<h3>Sources consultées par Gemini</h3>${src.map(s=>`<div class="hint">· <a href="${esc(s.uri)}" target="_blank" rel="noopener">${esc(s.title||s.uri)}</a></div>`).join('')}`:''}
+    <p class="hint">Généré le ${esc(out.date||'')}${out.model?' avec '+esc(out.model):''}. Vérifie toujours les prix avant de publier.</p></div>`;
+}
+async function vintedGenerate(){
+  const sel=allObjects().find(x=>x.o.id===vinted.objId);
+  const imgs=vinted.photos.length?vinted.photos:(sel&&thumbs[sel.o.id]?[thumbs[sel.o.id]]:[]);
+  if(!imgs.length)return toast('Ajoute au moins une photo');
+  vinted.busy=true;renderVinted();
+  gemStatus=s=>{const el=$('#vMsg');if(el)el.textContent=s};
+  const parts=[{text:VINTED_PROMPT+`\n\nDate du jour : ${new Date().toLocaleDateString('fr-FR')}.`+vintedContext()},...imgs.map(s=>({inline_data:{mime_type:'image/jpeg',data:s.split(',')[1]}}))];
+  let text,noWeb=false;
+  try{
+    try{text=await gemini(parts,null,{tools:[{google_search:{}}]})}
+    catch(e){if(e.status===400||/tool|search|grounding/i.test(e.message)){noWeb=true;lastGround=null;text=await gemini(parts,null)}else throw e}
+    const g=lastGround||{};
+    const sources=(g.groundingChunks||[]).map(c=>c.web).filter(Boolean);
+    vinted.out={text,sources,noWeb,date:new Date().toLocaleString('fr-FR'),model:lastModel};
+    LS.set('vinted_last',JSON.stringify(vinted.out));
+  }catch(err){toast('Erreur Gemini : '+err.message)}
+  finally{vinted.busy=false;renderVinted();const o=$('#vOut');if(o&&vinted.out)o.scrollIntoView({behavior:'smooth'})}
+}
+
 /* ---------- Événements ---------- */
 document.addEventListener('click',async e=>{
   const n=e.target.closest('#nav button');if(n){go(n.dataset.v);return}
@@ -655,6 +787,10 @@ document.addEventListener('click',async e=>{
   if(a==='closeDetail'){closeDetail();return}
   if(a==='costEditGo'){closeDetail();costEdit=el.dataset.id;go('costs');return}
   if($('#modal')&&(a==='edit'||a==='editItem'))closeDetail();
+  if(a==='toVinted'){vinted.objId=el.dataset.id;vinted.photos=[];vinted.out=null;go('vinted');return}
+  if(a==='vGenerate'){vintedGenerate();return}
+  if(a==='vClear'){vinted.photos=[];renderVinted();return}
+  if(a==='vCopy'){try{await navigator.clipboard.writeText(vinted.blocks[+el.dataset.i]);toast('Copié ✓ — colle-le dans Vinted')}catch(err){toast('Copie impossible : sélectionne le texte à la main')}return}
   if(a==='new')go('add');
   else if(a==='newItem')go('additem');
   else if(a==='editItem')go('additem',el.dataset.id);
